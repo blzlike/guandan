@@ -1,0 +1,7 @@
+{
+  "report_threshold": 10,
+  "low_card_alert": true,
+  "hand_mode": "column",
+  "ai_delay": 0.35,
+  "level_start": 2
+}
