@@ -17,10 +17,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore build caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer-cache/android
+            ~/.gradle-cache
+            guandan/.buildozer
+          key: buildozer-v1-${{ hashFiles('guandan/buildozer.spec') }}
+          restore-keys: buildozer-v1-
+
       - name: Build APK with official buildozer image
         run: |
+          mkdir -p ~/.buildozer-cache/android ~/.gradle-cache
           docker run --rm \
             --volume "$PWD:/home/user/hostcwd" \
+            --volume "$HOME/.buildozer-cache/android:/home/user/.buildozer/android" \
+            --volume "$HOME/.gradle-cache:/home/user/.gradle" \
             --workdir /home/user/hostcwd/guandan \
             ghcr.io/kivy/buildozer:latest \
             --verbose android debug
