@@ -30,6 +30,9 @@ jobs:
       - name: Build APK with official buildozer image
         run: |
           mkdir -p ~/.buildozer-cache/android ~/.gradle-cache
+          # 缓存恢复的 p4a 可能来自旧分支克隆（single-branch），不含新锁定的提交，
+          # 必须删除以便 buildozer 按当前 p4a.branch 重新克隆；保留 SDK/NDK/Gradle 缓存
+          rm -rf ~/.buildozer-cache/android/platform/python-for-android
           docker run --rm \
             --volume "$PWD:/home/user/hostcwd" \
             --volume "$HOME/.buildozer-cache/android:/home/user/.buildozer/android" \
