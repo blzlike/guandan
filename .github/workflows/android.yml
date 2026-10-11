@@ -19,10 +19,11 @@ jobs:
 
       - name: Build APK with official buildozer image
         run: |
-          docker run --rm -u root -e BUILDOZER_ALLOW_ROOT=1 --workdir /workspace \
-            -v "$PWD:/workspace" \
+          docker run --rm \
+            --volume "$PWD:/home/user/hostcwd" \
+            --workdir /home/user/hostcwd/guandan \
             ghcr.io/kivy/buildozer:latest \
-            bash -lc "cd guandan && buildozer --verbose android debug"
+            --verbose android debug
 
       - name: List build output
         run: ls -la guandan/bin || true
