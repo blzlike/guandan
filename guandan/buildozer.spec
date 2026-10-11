@@ -3,6 +3,7 @@
 # 应用基本信息
 title = 掼蛋
 package.name = guandan
+version = 1.0
 package.domain = org.guandan
 author = guandan
 author.email = unknown@example.com
