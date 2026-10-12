@@ -1,51 +1,68 @@
-name: Build Android APK
+name: Android APK
 
+# 推送到 main 且改动位于 guandan/ 子目录时触发（与本仓库布局一致）；
+# workflow_dispatch 支持手动触发
 on:
-  workflow_dispatch:
   push:
-    branches: [main, master]
-    paths:
-      - 'guandan/**'
-      - '.github/workflows/android.yml'
+    branches: [main]
+    paths: ['guandan/**']
+  workflow_dispatch:
+
+# 连续推送时自动取消排队/进行中的旧构建
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+env:
+  # 宿主机缓存目录：容器通过挂载读写（官方 buildozer 镜像内 ~ 指向
+  # /home/user，未挂载的宿主路径容器不可见，缓存不会生效）
+  CACHE_DIR: /home/runner/buildozer-cache
 
 jobs:
-  build-android:
-    name: Build for Android
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Restore build caches
+      # p4a 编译产物 + p4a 克隆（buildozer 源码确认两者均在项目
+      # .buildozer/android/platform/ 下）：spec 不变时跳过全部 recipe 编译。
+      # 注意这是唯一的大头缓存，SDK/NDK（容器 ~/.buildozer 全局目录，约
+      # 7GB）故意不缓存：全缓存会把总量顶到 11GB 超 GitHub 10GB 上限被
+      # 反复驱逐（旧 workflow 缓存失效根因），换 SDK/NDK 每次重下约 4-6 分钟。
+      - name: Cache p4a 编译产物与 p4a 源码
         uses: actions/cache@v4
         with:
           path: |
-            ~/.buildozer-cache/android
-            ~/.gradle-cache
-            guandan/.buildozer
-          key: buildozer-v1-${{ hashFiles('guandan/buildozer.spec') }}
-          restore-keys: buildozer-v1-
+            guandan/.buildozer/android/platform/build-arm64-v8a
+            guandan/.buildozer/android/platform/python-for-android
+          key: p4a-arm64-${{ hashFiles('guandan/buildozer.spec') }}
+          restore-keys: p4a-arm64-
 
-      - name: Build APK with official buildozer image
+      # Gradle 用户目录（wrapper 发行包与依赖缓存）
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CACHE_DIR }}/gradle
+          key: gradle-${{ hashFiles('guandan/buildozer.spec') }}
+          restore-keys: gradle-
+
+      # 缓存恢复的文件属主不是容器内 uid 1000，挂载前统一修正
+      - name: 修复缓存目录属主
         run: |
-          mkdir -p ~/.buildozer-cache/android ~/.gradle-cache
-          # 缓存恢复的 p4a 可能来自旧分支克隆（single-branch），不含新锁定的提交，
-          # 必须删除以便 buildozer 按当前 p4a.branch 重新克隆；保留 SDK/NDK/Gradle 缓存
-          rm -rf ~/.buildozer-cache/android/platform/python-for-android
+          sudo mkdir -p "$CACHE_DIR/gradle"
+          sudo chown -R 1000:1000 "$CACHE_DIR"
+
+      - name: 构建 APK（arm64-v8a）
+        run: |
           docker run --rm \
-            --volume "$PWD:/home/user/hostcwd" \
-            --volume "$HOME/.buildozer-cache/android:/home/user/.buildozer/android" \
-            --volume "$HOME/.gradle-cache:/home/user/.gradle" \
-            --workdir /home/user/hostcwd/guandan \
+            -v "$GITHUB_WORKSPACE":/home/user/hostcwd \
+            -v "$CACHE_DIR/gradle":/home/user/.gradle \
             ghcr.io/kivy/buildozer:latest \
-            --verbose android debug
+            bash -c "cd guandan && buildozer android debug"
 
-      - name: List build output
-        run: ls -la guandan/bin || true
-
-      - name: Upload artifacts
+      - name: 上传 APK
         uses: actions/upload-artifact@v4
         with:
           name: guandan-apk
           path: guandan/bin/*.apk
+          if-no-files-found: error

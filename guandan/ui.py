@@ -1566,6 +1566,23 @@ class GuandanApp(App):
         self.sounds.play("return_tribute")
         return True
 
+    def on_pause(self):
+        # Android 切后台：SDL_mixer 在后台会继续出声，停掉全部音频；
+        # 返回 True 表示进程驻留内存
+        self.sounds.stop_all()
+        return True
+
+    def on_resume(self):
+        # 后台稍长时间后 Android 会销毁并重建 Surface，回前台黑屏与启动黑屏
+        # 同因：Kivy 仅在 canvas 变脏时出帧（kivy/base.py EventLoop.idle），
+        # Surface 重建阶段的帧全部被丢弃、此后不再产生新帧。复用启动期修复：
+        # 短时标脏刷帧 + 重建牌桌纠正状态，并按设置恢复背景乐。
+        for t in (0.2, 0.6, 1.2):
+            Clock.schedule_once(lambda dt: self._force_redraw(), t)
+        Clock.schedule_interval(self._boot_dirty, 0.25)
+        Clock.schedule_once(self._stop_boot_dirty, 8)
+        self.sounds.update_bgm()
+
     def on_stop(self):
         self.sounds.stop_all()
         save_settings(self.settings)

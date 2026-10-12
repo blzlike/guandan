@@ -38,7 +38,9 @@ fullscreen = 1
 # 安卓构建参数
 android.api = 34
 android.minapi = 21
-android.archs = arm64-v8a, armeabi-v7a
+# 仅 arm64-v8a（2019 后设备全覆盖；放弃 32 位 armeabi-v7a，
+# 编译时间减半且 APK 体积从 57MB 降至约 30MB）
+android.archs = arm64-v8a
 android.accept_sdk_license = True
 android.allow_backup = True
 
