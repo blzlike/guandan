@@ -1,1 +1,155 @@
-IiIi6Z+z5pWI5LiO6IOM5pmv5LmQ566h55CG77yIS2l2eSBTb3VuZExvYWRlcu+8jOaXoOaWsOWinuesrOS4ieaWueS+nei1lu+8ieOAggoK6LWE5rqQ57qm5a6a77yaYGBzb3VuZHMvYGAg55uu5b2V5LiL5pS+572uIG9nZ++8iOWuieWNk+aOqOiNkO+8ieaIliB3YXYg5paH5Lu277yMCuaWh+S7tuWQje+8iOS4jeWQq+aJqeWxleWQje+8ieingSBgYFNGWF9GSUxFU2BgIOS4jiBgYEJHTV9GSUxFU2Bg44CCCue8uuWkseeahOe0oOadkOWcqOWKoOi9veaXtumdmem7mOi3s+i/h++8jOaSreaUvuiwg+eUqOS4jeS6p+eUn+mUmeivr+KAlOKAlArkvr/kuo7lhYjmjqXlpb3lhajpg6jku6PnoIHjgIHlkI7nu63mjInmuIXljZXooaXlhYXpn7PpopHmlofku7bjgIIKCuS6i+S7tuKGkumfs+aViOaYoOWwhO+8iOWPguiAg+mAmueUqOaOvOibi+S5oOaDr++8ie+8mgotIGRlYWwgICAgICAgIOWPkeeJjO+8iOavj+WxgOW8gOWni++8iQotIHBsYXlfKiAgICAgIOWHuueJjO+8jOaMieeJjOWei+WMuuWIhu+8iOWNleW8oC/lr7nlrZAv5aSN5ZCI54mM5Z6LL+eCuOW8uS/lkIzoirHpobov5aSp546L54K477yJCi0gcGFzcyAgICAgICAg6L+H54mM77yI5L2O5rKJ5o+Q56S66Z+z77yJCi0gdHJpYnV0ZSAgICAg6L+b6LSh77ybcmV0dXJuX3RyaWJ1dGUg6L+Y6LShCi0gYWxlcnQgICAgICAg5oql54mM6K2m56S677yI5Ymp54mM4omk6ZiI5YC877yJCi0gcm91bmRfd2luIC8gcm91bmRfbG9zZSAgICDkuIDlsYDog5zotJ/nu5PnrpcKLSBtYXRjaF93aW4gLyBtYXRjaF9sb3NlICAgIOaVtOWcuuavlOi1m+e7iOWxgAotIGJnbV90cmFjazEgLyBiZ21fdHJhY2syICAg6IOM5pmv5LmQ77yI5b6q546v5pKt5pS+77yM6K6+572u5LiJ6YCJ5LiA77yJCiIiIgpmcm9tIF9fZnV0dXJlX18gaW1wb3J0IGFubm90YXRpb25zCgppbXBvcnQgb3MKaW1wb3J0IHN5cwpmcm9tIHR5cGluZyBpbXBvcnQgQ2FsbGFibGUsIERpY3QsIE9wdGlvbmFsCgpmcm9tIGtpdnkuY29yZS5hdWRpbyBpbXBvcnQgU291bmRMb2FkZXIKCmZyb20gcnVsZXMgaW1wb3J0IEhhbmRUeXBlCgpTT1VORF9ESVIgPSBvcy5wYXRoLmpvaW4oCiAgICBnZXRhdHRyKHN5cywgIl9NRUlQQVNTIiwgb3MucGF0aC5kaXJuYW1lKG9zLnBhdGguYWJzcGF0aChfX2ZpbGVfXykpKSwgInNvdW5kcyIpCgojIOS6i+S7tuWQjSAtPiDpn7PpopHmlofku7blkI3vvIjkuI3lkKvmianlsZXlkI3vvIzkvp3mrKHlsJ3or5UgLm9nZyAvIC53YXbvvIkKU0ZYX0ZJTEVTOiBEaWN0W3N0ciwgc3RyXSA9IHsKICAgICJkZWFsIjogImRlYWwiLAogICAgInBhc3MiOiAicGFzcyIsCiAgICAidHJpYnV0ZSI6ICJ0cmlidXRlIiwKICAgICJyZXR1cm5fdHJpYnV0ZSI6ICJyZXR1cm5fdHJpYnV0ZSIsCiAgICAiYWxlcnQiOiAiYWxlcnQiLAogICAgInBsYXlfc2luZ2xlIjogInBsYXlfc2luZ2xlIiwKICAgICJwbGF5X3BhaXIiOiAicGxheV9wYWlyIiwKICAgICJwbGF5X211bHRpIjogInBsYXlfbXVsdGkiLCAgICAgICAjIOS4ieWQjOW8oC/kuInluKbkuowv6aG65a2QL+i/nuWvuS/pkqLmnb8KICAgICJwbGF5X2JvbWIiOiAicGxheV9ib21iIiwKICAgICJwbGF5X3NmIjogInBsYXlfc2YiLAogICAgInBsYXlfcm9ja2V0IjogInBsYXlfcm9ja2V0IiwKICAgICJyb3VuZF93aW4iOiAicm91bmRfd2luIiwKICAgICJyb3VuZF9sb3NlIjogInJvdW5kX2xvc2UiLAogICAgIm1hdGNoX3dpbiI6ICJtYXRjaF93aW4iLAogICAgIm1hdGNoX2xvc2UiOiAibWF0Y2hfbG9zZSIsCn0KCkJHTV9GSUxFUzogRGljdFtzdHIsIHN0cl0gPSB7CiAgICAidHJhY2sxIjogImJnbV90cmFjazEiLAogICAgInRyYWNrMiI6ICJiZ21fdHJhY2syIiwKfQoKCmRlZiBldmVudF9mb3JfY29tYm8oY29tYm8pIC0+IHN0cjoKICAgICIiIuaMieeJjOWei+i/lOWbnuWHuueJjOmfs+aViOS6i+S7tuWQjeOAgiIiIgogICAgdCA9IGNvbWJvLnR5cGUKICAgIGlmIHQgaXMgSGFuZFR5cGUuU0lOR0xFOgogICAgICAgIHJldHVybiAicGxheV9zaW5nbGUiCiAgICBpZiB0IGlzIEhhbmRUeXBlLlBBSVI6CiAgICAgICAgcmV0dXJuICJwbGF5X3BhaXIiCiAgICBpZiB0IGlzIEhhbmRUeXBlLlJPQ0tFVDoKICAgICAgICByZXR1cm4gInBsYXlfcm9ja2V0IgogICAgaWYgdCBpcyBIYW5kVHlwZS5TVFJBSUdIVF9GTFVTSDoKICAgICAgICByZXR1cm4gInBsYXlfc2YiCiAgICBpZiB0IGlzIEhhbmRUeXBlLkJPTUI6CiAgICAgICAgcmV0dXJuICJwbGF5X2JvbWIiCiAgICByZXR1cm4gInBsYXlfbXVsdGkiCgoKY2xhc3MgU291bmRNYW5hZ2VyOgogICAgIiIi57uf5LiA566h55CG6Z+z5pWI5LiO6IOM5pmv5LmQ44CCCgogICAgYGBzZXR0aW5nc19nZXR0ZXJgYO+8mui/lOWbnuiuvue9ruWtl+WFuOeahOWPr+iwg+eUqO+8iOWunuaXtuivu+WPluW8gOWFsy/mm7Lnm67vvInjgIIKICAgIOaJgOacieaWueazleWcqOe0oOadkOe8uuWkseOAgemfs+mikeWQjuerr+S4jeWPr+eUqOaXtumdmem7mOmZjee6p++8jOe7neS4jeaKm+mUmeOAggogICAgIiIiCgogICAgZGVmIF9faW5pdF9fKHNlbGYsIHNldHRpbmdzX2dldHRlcjogQ2FsbGFibGVbW10sIGRpY3RdKSAtPiBOb25lOgogICAgICAgIHNlbGYuX2dldCA9IHNldHRpbmdzX2dldHRlcgogICAgICAgIHNlbGYuX3NmeDogRGljdFtzdHIsIG9iamVjdF0gPSB7fQogICAgICAgIHNlbGYuX2JnbSA9IE5vbmUKICAgICAgICBzZWxmLl9iZ21fbmFtZTogT3B0aW9uYWxbc3RyXSA9IE5vbmUKICAgICAgICBzZWxmLl9sb2FkZWQgPSBGYWxzZQoKICAgICMgLS0tLSDlhoXpg6gKICAgIGRlZiBfbG9hZF9vbmUoc2VsZiwgc3RlbTogc3RyKToKICAgICAgICBmb3IgZXh0IGluICgiLm9nZyIsICIud2F2Iik6CiAgICAgICAgICAgIHBhdGggPSBvcy5wYXRoLmpvaW4oU09VTkRfRElSLCBzdGVtICsgZXh0KQogICAgICAgICAgICBpZiBvcy5wYXRoLmV4aXN0cyhwYXRoKToKICAgICAgICAgICAgICAgIHRyeToKICAgICAgICAgICAgICAgICAgICByZXR1cm4gU291bmRMb2FkZXIubG9hZChwYXRoKQogICAgICAgICAgICAgICAgZXhjZXB0IEV4Y2VwdGlvbjoKICAgICAgICAgICAgICAgICAgICByZXR1cm4gTm9uZQogICAgICAgIHJldHVybiBOb25lCgogICAgZGVmIGVuc3VyZV9sb2FkZWQoc2VsZikgLT4gTm9uZToKICAgICAgICAiIiLmh5LliqDovb3lhajpg6jpn7PmlYjntKDmnZDvvIjku4XpppbmrKHnlJ/mlYjvvInjgIIiIiIKICAgICAgICBpZiBzZWxmLl9sb2FkZWQ6CiAgICAgICAgICAgIHJldHVybgogICAgICAgIHNlbGYuX2xvYWRlZCA9IFRydWUKICAgICAgICBmb3IgZXYsIHN0ZW0gaW4gU0ZYX0ZJTEVTLml0ZW1zKCk6CiAgICAgICAgICAgIHNlbGYuX3NmeFtldl0gPSBzZWxmLl9sb2FkX29uZShzdGVtKQoKICAgICMgLS0tLSDlr7nlpJYKICAgIGRlZiBwbGF5KHNlbGYsIGV2ZW50OiBzdHIpIC0+IE5vbmU6CiAgICAgICAgIiIi5pKt5pS+5LiA5qyh6Z+z5pWI77yb5byA5YWz5YWz6Zet5oiW57Sg5p2Q57y65aSx5pe26Z2Z6buY6Lez6L+H44CCIiIiCiAgICAgICAgaWYgbm90IHNlbGYuX2dldCgpLmdldCgic291bmQiLCBUcnVlKToKICAgICAgICAgICAgcmV0dXJuCiAgICAgICAgc2VsZi5lbnN1cmVfbG9hZGVkKCkKICAgICAgICBzbmQgPSBzZWxmLl9zZnguZ2V0KGV2ZW50KQogICAgICAgIGlmIHNuZCBpcyBub3QgTm9uZToKICAgICAgICAgICAgdHJ5OgogICAgICAgICAgICAgICAgc25kLnN0b3AoKQogICAgICAgICAgICAgICAgc25kLnBsYXkoKQogICAgICAgICAgICBleGNlcHQgRXhjZXB0aW9uOgogICAgICAgICAgICAgICAgcGFzcwoKICAgIGRlZiB1cGRhdGVfYmdtKHNlbGYpIC0+IE5vbmU6CiAgICAgICAgIiIi5oyJ5b2T5YmN6K6+572u5YiH5o2iL+WQr+WBnOiDjOaZr+S5kO+8iOiuvue9ruS/neWtmOWQjuiwg+eUqO+8ieOAgiIiIgogICAgICAgIG5hbWUgPSBzZWxmLl9nZXQoKS5nZXQoImJnbSIsICJvZmYiKQogICAgICAgIGlmIG5hbWUgPT0gIm9mZiI6CiAgICAgICAgICAgIHNlbGYuc3RvcF9iZ20oKQogICAgICAgICAgICByZXR1cm4KICAgICAgICBpZiBuYW1lID09IHNlbGYuX2JnbV9uYW1lIGFuZCBzZWxmLl9iZ20gaXMgbm90IE5vbmU6CiAgICAgICAgICAgIHJldHVybiAgICAgICAgICAjIOabsuebruacquWPmO+8jOS4jeaJk+aWrQogICAgICAgIHNlbGYuc3RvcF9iZ20oKQogICAgICAgIHNuZCA9IHNlbGYuX2xvYWRfb25lKEJHTV9GSUxFUy5nZXQobmFtZSwgIiIpKQogICAgICAgIGlmIHNuZCBpcyBub3QgTm9uZToKICAgICAgICAgICAgdHJ5OgogICAgICAgICAgICAgICAgc25kLmxvb3AgPSBUcnVlCiAgICAgICAgICAgICAgICBzbmQucGxheSgpCiAgICAgICAgICAgIGV4Y2VwdCBFeGNlcHRpb246CiAgICAgICAgICAgICAgICBzbmQgPSBOb25lCiAgICAgICAgc2VsZi5fYmdtID0gc25kCiAgICAgICAgc2VsZi5fYmdtX25hbWUgPSBuYW1lIGlmIHNuZCBpcyBub3QgTm9uZSBlbHNlIE5vbmUKCiAgICBkZWYgc3RvcF9iZ20oc2VsZikgLT4gTm9uZToKICAgICAgICBpZiBzZWxmLl9iZ20gaXMgbm90IE5vbmU6CiAgICAgICAgICAgIHRyeToKICAgICAgICAgICAgICAgIHNlbGYuX2JnbS5zdG9wKCkKICAgICAgICAgICAgZXhjZXB0IEV4Y2VwdGlvbjoKICAgICAgICAgICAgICAgIHBhc3MKICAgICAgICBzZWxmLl9iZ20gPSBOb25lCiAgICAgICAgc2VsZi5fYmdtX25hbWUgPSBOb25lCgogICAgZGVmIHN0b3BfYWxsKHNlbGYpIC0+IE5vbmU6CiAgICAgICAgIiIiQXBwIOmAgOWHuuaXtuiwg+eUqOOAgiIiIgogICAgICAgIHNlbGYuc3RvcF9iZ20oKQogICAgICAgIGZvciBzbmQgaW4gc2VsZi5fc2Z4LnZhbHVlcygpOgogICAgICAgICAgICBpZiBzbmQgaXMgbm90IE5vbmU6CiAgICAgICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICAgICAgc25kLnN0b3AoKQogICAgICAgICAgICAgICAgZXhjZXB0IEV4Y2VwdGlvbjoKICAgICAgICAgICAgICAgICAgICBwYXNzCg==
+"""音效与背景乐管理（Kivy SoundLoader，无新增第三方依赖）。
+
+资源约定：``sounds/`` 目录下放置 ogg（安卓推荐）或 wav 文件，
+文件名（不含扩展名）见 ``SFX_FILES`` 与 ``BGM_FILES``。
+缺失的素材在加载时静默跳过，播放调用不产生错误——
+便于先接好全部代码、后续按清单补充音频文件。
+
+事件→音效映射（参考通用掼蛋习惯）：
+- deal        发牌（每局开始）
+- play_*      出牌，按牌型区分（单张/对子/复合牌型/炸弹/同花顺/天王炸）
+- pass        过牌（低沉提示音）
+- tribute     进贡；return_tribute 还贡
+- alert       报牌警示（剩牌≤阈值）
+- round_win / round_lose    一局胜负结算
+- match_win / match_lose    整场比赛终局
+- bgm_track1 / bgm_track2   背景乐（循环播放，设置三选一）
+"""
+from __future__ import annotations
+
+import os
+import sys
+from typing import Callable, Dict, Optional
+
+from kivy.core.audio import SoundLoader
+
+from rules import HandType
+
+SOUND_DIR = os.path.join(
+    getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))), "sounds")
+
+# 事件名 -> 音频文件名（不含扩展名，依次尝试 .ogg / .wav）
+SFX_FILES: Dict[str, str] = {
+    "deal": "deal",
+    "pass": "pass",
+    "tribute": "tribute",
+    "return_tribute": "return_tribute",
+    "alert": "alert",
+    "play_single": "play_single",
+    "play_pair": "play_pair",
+    "play_multi": "play_multi",       # 三同张/三带二/顺子/连对/钢板
+    "play_bomb": "play_bomb",
+    "play_sf": "play_sf",
+    "play_rocket": "play_rocket",
+    "round_win": "round_win",
+    "round_lose": "round_lose",
+    "match_win": "match_win",
+    "match_lose": "match_lose",
+}
+
+BGM_FILES: Dict[str, str] = {
+    "track1": "bgm_track1",
+    "track2": "bgm_track2",
+}
+
+
+def event_for_combo(combo) -> str:
+    """按牌型返回出牌音效事件名。"""
+    t = combo.type
+    if t is HandType.SINGLE:
+        return "play_single"
+    if t is HandType.PAIR:
+        return "play_pair"
+    if t is HandType.ROCKET:
+        return "play_rocket"
+    if t is HandType.STRAIGHT_FLUSH:
+        return "play_sf"
+    if t is HandType.BOMB:
+        return "play_bomb"
+    return "play_multi"
+
+
+class SoundManager:
+    """统一管理音效与背景乐。
+
+    ``settings_getter``：返回设置字典的可调用（实时读取开关/曲目）。
+    所有方法在素材缺失、音频后端不可用时静默降级，绝不抛错。
+    """
+
+    def __init__(self, settings_getter: Callable[[], dict]) -> None:
+        self._get = settings_getter
+        self._sfx: Dict[str, object] = {}
+        self._bgm = None
+        self._bgm_name: Optional[str] = None
+        self._loaded = False
+
+    # ---- 内部
+    def _load_one(self, stem: str):
+        for ext in (".ogg", ".wav"):
+            path = os.path.join(SOUND_DIR, stem + ext)
+            if os.path.exists(path):
+                try:
+                    return SoundLoader.load(path)
+                except Exception:
+                    return None
+        return None
+
+    def ensure_loaded(self) -> None:
+        """懒加载全部音效素材（仅首次生效）。"""
+        if self._loaded:
+            return
+        self._loaded = True
+        for ev, stem in SFX_FILES.items():
+            self._sfx[ev] = self._load_one(stem)
+
+    # ---- 对外
+    def play(self, event: str) -> None:
+        """播放一次音效；开关关闭或素材缺失时静默跳过。"""
+        if not self._get().get("sound", True):
+            return
+        self.ensure_loaded()
+        snd = self._sfx.get(event)
+        if snd is not None:
+            try:
+                snd.stop()
+                snd.play()
+            except Exception:
+                pass
+
+    def update_bgm(self) -> None:
+        """按当前设置切换/启停背景乐（设置保存后调用）。"""
+        name = self._get().get("bgm", "off")
+        if name == "off":
+            self.stop_bgm()
+            return
+        if name == self._bgm_name and self._bgm is not None:
+            return          # 曲目未变，不打断
+        self.stop_bgm()
+        snd = self._load_one(BGM_FILES.get(name, ""))
+        if snd is not None:
+            try:
+                snd.loop = True
+                snd.play()
+            except Exception:
+                snd = None
+        self._bgm = snd
+        self._bgm_name = name if snd is not None else None
+
+    def stop_bgm(self) -> None:
+        if self._bgm is not None:
+            try:
+                self._bgm.stop()
+            except Exception:
+                pass
+        self._bgm = None
+        self._bgm_name = None
+
+    def stop_all(self) -> None:
+        """App 退出时调用。"""
+        self.stop_bgm()
+        for snd in self._sfx.values():
+            if snd is not None:
+                try:
+                    snd.stop()
+                except Exception:
+                    pass

@@ -1,1 +1,69 @@
-IiIi5Y2V5py65o686JuL56iL5bqP5YWl5Y+j44CCCgrnlKjms5XvvJoKICAgIHB5dGhvbiBtYWluLnB5ICAgICAgICAgICAgICAgICAjIOWQr+WKqCBLaXZ5IOWbvuW9oueVjOmdou+8iDHkurrnsbsgKyAzQUnvvIkKICAgIHB5dGhvbiBtYWluLnB5IC0tc2ltdWxhdGUgNSAgICAjIOaXoOeVjOmdou+8jEFJIOWFqOiHquWKqOaooeaLnyA1IOWcuuWujOaVtOavlOi1m++8iOWGkueDny/pqozor4HvvIkKICAgIHB5dGhvbiBtYWluLnB5IC0tc2VlZCA0MiAgICAgICAjIOaMh+Wumumaj+acuuenjeWtkO+8iOWPr+WkjeeOsO+8iQoK5omT5YyFIFdpbmRvd3MgRVhF77ya6KeBIGJ1aWxkLnNwZWMgLyBSRUFETUXvvIzkvb/nlKggUHlJbnN0YWxsZXIg54us56uL5omT5YyF44CCCiIiIgpmcm9tIF9fZnV0dXJlX18gaW1wb3J0IGFubm90YXRpb25zCgppbXBvcnQgb3MKaW1wb3J0IHN5cwoKIyBLaXZ5IOmFjee9ruW/hemhu+WcqOWvvOWFpeS7u+S9lSBraXZ5LnVpeCDkuYvliY3orr7nva4Kb3MuZW52aXJvbi5zZXRkZWZhdWx0KCJLSVZZX05PX0NPTlNPTEVMT0ciLCAiMCIpCm9zLmVudmlyb25bIktJVllfTk9fQVJHUyJdID0gIjEiICAjIOS4jeiuqSBLaXZ5IOino+aekCBzeXMuYXJndu+8iOaIkeS7rOiHquihjOino+aekO+8iQp0cnk6CiAgICBmcm9tIGtpdnkuY29uZmlnIGltcG9ydCBDb25maWcKICAgIENvbmZpZy5zZXQoImdyYXBoaWNzIiwgIndpZHRoIiwgIjEyODAiKQogICAgQ29uZmlnLnNldCgiZ3JhcGhpY3MiLCAiaGVpZ2h0IiwgIjcyMCIpCiAgICBDb25maWcuc2V0KCJncmFwaGljcyIsICJyZXNpemFibGUiLCAiMSIpCiAgICBDb25maWcuc2V0KCJraXZ5IiwgIndpbmRvd19zdGF0ZSIsICJ2aXNpYmxlIikKICAgICMg5Y+M5Ye75Yik5a6a5pS+5a695YiwIDM1MG1z77yI6buY6K6kIDI1MG1z77yJ77yM6Kem5bGP5LiK5Y+M5Ye75b+r6YCf6YCJ57uE5pu05piT6Kem5Y+RCiAgICBDb25maWcuc2V0KCJpbnB1dCIsICJkb3VibGVfdGFwX3RpbWUiLCAiMzUwIikKICAgICMg6aKE55WZIEFuZHJvaWQg5qiq5bGP77yIQVBLIOmYtuauteWQr+eUqO+8iQogICAgQ29uZmlnLnNldCgiZ3JhcGhpY3MiLCAib3JpZW50YXRpb24iLCAibGFuZHNjYXBlIikKZXhjZXB0IEV4Y2VwdGlvbjoKICAgIHBhc3MKCnN5cy5wYXRoLmluc2VydCgwLCBvcy5wYXRoLmRpcm5hbWUob3MucGF0aC5hYnNwYXRoKF9fZmlsZV9fKSkpCgoKZGVmIF9zaW11bGF0ZShuOiBpbnQsIHNlZWQpOgogICAgaW1wb3J0IHJhbmRvbQogICAgZnJvbSBhaSBpbXBvcnQgQUlQcm9maWxlLCBzaW11bGF0ZV9tYXRjaAogICAgZnJvbSBnYW1lIGltcG9ydCBHdWFuZGFuR2FtZQogICAgcHJvZmlsZXMgPSBbQUlQcm9maWxlKCJiYWxhbmNlZCIpLCBBSVByb2ZpbGUoImFnZ3Jlc3NpdmUiKSwKICAgICAgICAgICAgICAgIEFJUHJvZmlsZSgiYmFsYW5jZWQiKSwgQUlQcm9maWxlKCJjb25zZXJ2YXRpdmUiKV0KICAgIHRvdGFsX2FjdGlvbnMgPSAwCiAgICBmb3IgaSBpbiByYW5nZShuKToKICAgICAgICBzZCA9IE5vbmUgaWYgc2VlZCBpcyBOb25lIGVsc2Ugc2VlZCArIGkKICAgICAgICBnID0gR3VhbmRhbkdhbWUocm5nPXJhbmRvbS5SYW5kb20oc2QpKQogICAgICAgIHJlcyA9IHNpbXVsYXRlX21hdGNoKGcsIHByb2ZpbGVzKQogICAgICAgIHRvdGFsX2FjdGlvbnMgKz0gcmVzWyJhY3Rpb25zIl0KICAgICAgICBwcmludChmIuavlOi1m3tpICsgMX06IOiDnOmYnz17cmVzWyd3aW5uZXJfdGVhbSddfSDlsYDmlbA9e3Jlc1sncm91bmRzJ119ICIKICAgICAgICAgICAgICBmIuetiee6pz17cmVzWydsZXZlbHMnXX0g5Yqo5L2cPXtyZXNbJ2FjdGlvbnMnXX0iKQogICAgcHJpbnQoZiLlhbEge259IOWcuuWFqOmDqOato+W4uOe7k+adn++8jOaXoOatu+W+queOr+OAguW5s+Wdh+WKqOS9nCB7dG90YWxfYWN0aW9ucyAvLyBtYXgoMSwgbil9IikKCgpkZWYgbWFpbigpOgogICAgYXJncyA9IHN5cy5hcmd2WzE6XQogICAgaWYgIi0tc2ltdWxhdGUiIGluIGFyZ3M6CiAgICAgICAgaWR4ID0gYXJncy5pbmRleCgiLS1zaW11bGF0ZSIpCiAgICAgICAgbiA9IGludChhcmdzW2lkeCArIDFdKSBpZiBpZHggKyAxIDwgbGVuKGFyZ3MpIGVsc2UgMQogICAgICAgIHNlZWQgPSBOb25lCiAgICAgICAgaWYgIi0tc2VlZCIgaW4gYXJnczoKICAgICAgICAgICAgc2VlZCA9IGludChhcmdzW2FyZ3MuaW5kZXgoIi0tc2VlZCIpICsgMV0pCiAgICAgICAgX3NpbXVsYXRlKG4sIHNlZWQpCiAgICAgICAgcmV0dXJuCiAgICBmcm9tIHVpIGltcG9ydCBydW4KICAgIHNlZWQgPSBOb25lCiAgICBpZiAiLS1zZWVkIiBpbiBhcmdzOgogICAgICAgIHNlZWQgPSBpbnQoYXJnc1thcmdzLmluZGV4KCItLXNlZWQiKSArIDFdKQogICAgcnVuKHNlZWQ9c2VlZCkKCgppZiBfX25hbWVfXyA9PSAiX19tYWluX18iOgogICAgbWFpbigpCg==
+"""单机掼蛋程序入口。
+
+用法：
+    python main.py                 # 启动 Kivy 图形界面（1人类 + 3AI）
+    python main.py --simulate 5    # 无界面，AI 全自动模拟 5 场完整比赛（冒烟/验证）
+    python main.py --seed 42       # 指定随机种子（可复现）
+
+打包 Windows EXE：见 build.spec / README，使用 PyInstaller 独立打包。
+"""
+from __future__ import annotations
+
+import os
+import sys
+
+# Kivy 配置必须在导入任何 kivy.uix 之前设置
+os.environ.setdefault("KIVY_NO_CONSOLELOG", "0")
+os.environ["KIVY_NO_ARGS"] = "1"  # 不让 Kivy 解析 sys.argv（我们自行解析）
+try:
+    from kivy.config import Config
+    Config.set("graphics", "width", "1280")
+    Config.set("graphics", "height", "720")
+    Config.set("graphics", "resizable", "1")
+    Config.set("kivy", "window_state", "visible")
+    # 双击判定放宽到 350ms（默认 250ms），触屏上双击快速选组更易触发
+    Config.set("input", "double_tap_time", "350")
+    # 预留 Android 横屏（APK 阶段启用）
+    Config.set("graphics", "orientation", "landscape")
+except Exception:
+    pass
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+
+def _simulate(n: int, seed):
+    import random
+    from ai import AIProfile, simulate_match
+    from game import GuandanGame
+    profiles = [AIProfile("balanced"), AIProfile("aggressive"),
+                AIProfile("balanced"), AIProfile("conservative")]
+    total_actions = 0
+    for i in range(n):
+        sd = None if seed is None else seed + i
+        g = GuandanGame(rng=random.Random(sd))
+        res = simulate_match(g, profiles)
+        total_actions += res["actions"]
+        print(f"比赛{i + 1}: 胜队={res['winner_team']} 局数={res['rounds']} "
+              f"等级={res['levels']} 动作={res['actions']}")
+    print(f"共 {n} 场全部正常结束，无死循环。平均动作 {total_actions // max(1, n)}")
+
+
+def main():
+    args = sys.argv[1:]
+    if "--simulate" in args:
+        idx = args.index("--simulate")
+        n = int(args[idx + 1]) if idx + 1 < len(args) else 1
+        seed = None
+        if "--seed" in args:
+            seed = int(args[args.index("--seed") + 1])
+        _simulate(n, seed)
+        return
+    from ui import run
+    seed = None
+    if "--seed" in args:
+        seed = int(args[args.index("--seed") + 1])
+    run(seed=seed)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,1 +1,341 @@
-IiIi54mM5bGA54q25oCB5LiO5rWB56iL5o6n5Yi244CCCgrogYzotKPvvJrlj5HniYzjgIHlm57lkIjmtYHovazjgIHlkIjms5Xlh7rniYzmoKHpqozvvIjnu5/kuIDlp5TmiZggcnVsZXMg5byV5pOO77yJ44CB6L+b6LSh6L+Y6LSh44CBCuaOpemjjuOAgeWNh+e6p+mAu+i+keOAgeiDnOi0n+WIpOWumuOAguacrOaooeWdl+S4jeWMheWQq+S7u+S9lSBVSSDmiJYgQUkg562W55Wl6YC76L6R44CCCgrluqfkvY3kuI7pmJ/kvI3vvJowPeS6uuexu+eOqeWutu+8iOS4i+aWue+8ie+8jDE95Y+z5a62QUnvvIwyPeWvueWutkFJ77yI5LiK5pa577yJ77yMMz3lt6blrrZBSeOAggrpmJ/kvI3vvJow6ZifPXswLDJ977yMMemYnz17MSwzfe+8jOaMiSAw4oaSMeKGkjLihpIzIOi9rui9rOOAggoK6KeE5YiZ6KaB54K577yIVjEuMCDpgJrnlKjmoIflh4bvvIzlvoXnoa7orqTpobnop4EgUkVBRE1FL+WPmOabtOaRmOimge+8ie+8mgotIOWNh+e6p++8muWPjOS4iysz44CB5aS05ri4K+S4iea4uCsy44CB5aS05ri4K+acq+a4uCsx77yM5bCB6aG2IEEoMTQp44CCCi0g5LiA5pa55Lik5a625YWo6YOo5Ye65a6M5Y2z5pys5bGA57uT5p2f77yM5pyq5omT5a6M55qE5Lik5a6255u05o6l6K6w5pyr5ri444CCCi0g5omTIEEg55qE6Zif5LyN5ou/5Yiw5aS05ri45Y2z6I636IOc77yI6Iul6ZyAIuaJk0Hlv4Xpobvlj4zkuIsi5Li65Y+Y5L2T6KeE5YiZ77yM5b6F56Gu6K6k77yJ44CCCi0g6L+b6LSh77ya5Y+R54mM5ZCO77yM5pyr5ri45ZCR5aS05ri46L+b5omL5Lit5pyA5aSn54mM77yI57qi5qGD57qn54mML+mAouS6uumFjemZpOWklu+8jOiLpeWFqOS4uumAouS6uumFjeWImei/m+acgOWkp++8ie+8mwogIOWPjOS4i+aXtuS4iea4uOWPpuWQkeS6jOa4uOi/m+i0oeOAgui/m+i0oeaWueWQiOiuoeaMgeacieS4pOW8oOWkp+eOi+WPr+aKl+i0oeOAggotIOi/mOi0oe+8muWPl+i0oeaWueS7u+aEj+i/mOS4gOW8oOOAggotIOS4i+S4gOWxgOmmluWHuu+8mui/m+i0oeaWue+8iOacq+a4uO+8ieWFiOWHuu+8m+aKl+i0oeWImeWktOa4uOWFiOWHuuOAggotIOaOpemjju+8muacgOWQjuWHuueJjOiAheWHuuWujOS4lOWFtuS9meWQhOWutuWdh+i/h+eJjO+8jOWImeeUseWFtuWvueWutuaOpemjjummluWHuuOAggoiIiIKZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhbm5vdGF0aW9ucwoKaW1wb3J0IHJhbmRvbQpmcm9tIHR5cGluZyBpbXBvcnQgRGljdCwgTGlzdCwgT3B0aW9uYWwsIFR1cGxlCgpmcm9tIGNhcmRzIGltcG9ydCBCSUdfSk9LRVIsIENhcmQsIGJ1aWxkX2RlY2ssIHBvaW50X3ZhbHVlCmZyb20gcnVsZXMgaW1wb3J0IENvbWJvLCBSdWxlQ29uZmlnLCBjYW5fcGxheQoKCmNsYXNzIEdhbWVFcnJvcihFeGNlcHRpb24pOgogICAgcGFzcwoKCmNsYXNzIElsbGVnYWxQbGF5RXJyb3IoR2FtZUVycm9yKToKICAgIHBhc3MKCgpjbGFzcyBOb3RQbGF5ZXJUdXJuRXJyb3IoR2FtZUVycm9yKToKICAgIHBhc3MKCgpjbGFzcyBHdWFuZGFuR2FtZToKICAgIEhBTkRfU0laRSA9IFJ1bGVDb25maWcuSEFORF9TSVpFCiAgICBQTEFZRVJTID0gUnVsZUNvbmZpZy5QTEFZRVJTCgogICAgZGVmIF9faW5pdF9fKHNlbGYsIHJuZzogT3B0aW9uYWxbcmFuZG9tLlJhbmRvbV0gPSBOb25lKSAtPiBOb25lOgogICAgICAgIHNlbGYucm5nID0gcm5nIG9yIHJhbmRvbS5SYW5kb20oKQogICAgICAgIHNlbGYubGV2ZWxzOiBEaWN0W2ludCwgaW50XSA9IHswOiAyLCAxOiAyfQogICAgICAgIHNlbGYucGxheWluZ190ZWFtID0gMAogICAgICAgIHNlbGYucm91bmRfbnVtYmVyID0gMAogICAgICAgIHNlbGYucGhhc2UgPSAic2V0dXAiICAjIHNldHVwIHwgcGxheWluZyB8IHRyaWJ1dGUgfCByb3VuZF9vdmVyIHwgbWF0Y2hfb3ZlcgogICAgICAgIHNlbGYuaGFuZHM6IERpY3RbaW50LCBMaXN0W0NhcmRdXSA9IHtpOiBbXSBmb3IgaSBpbiByYW5nZSg0KX0KICAgICAgICBzZWxmLnR1cm4gPSAwCiAgICAgICAgc2VsZi5sYXN0X3BsYXk6IE9wdGlvbmFsW1R1cGxlW2ludCwgQ29tYm9dXSA9IE5vbmUKICAgICAgICBzZWxmLnRyaWNrX2Rpc3BsYXlzOiBEaWN0W2ludCwgZGljdF0gPSB7fSAgIyBwaWQgLT4geyJhY3Rpb24iOiAicGxheSIvInBhc3MiLCAiY29tYm8iOiBDb21ib30KICAgICAgICBzZWxmLnBhc3NlZF9zaW5jZTogc2V0ID0gc2V0KCkKICAgICAgICBzZWxmLmZpbmlzaF9vcmRlcjogTGlzdFtpbnRdID0gW10KICAgICAgICBzZWxmLnRyaWJ1dGVfcGFpcnM6IExpc3RbVHVwbGVbaW50LCBpbnRdXSA9IFtdICAjIChnaXZlciwgcmVjZWl2ZXIpCiAgICAgICAgc2VsZi50cmlidXRlX2RvbmU6IERpY3RbaW50LCBpbnRdID0ge30gICMgZ2l2ZXIgLT4gcmVjZWl2ZXIKICAgICAgICBzZWxmLnJldHVybl9kb25lOiBEaWN0W2ludCwgaW50XSA9IHt9ICAjIHJlY2VpdmVyIC0+IGdpdmVyCiAgICAgICAgc2VsZi50cmlidXRlX3JlZnVzZWQgPSBGYWxzZQogICAgICAgIHNlbGYudHJpYnV0ZV9kaXNwbGF5czogRGljdFtpbnQsIGRpY3RdID0ge30gICMgcGlkIC0+IHsia2luZCI6ICJ0cmlidXRlIi8icmV0dXJuIiwgImNhcmQiOiBDYXJkfQogICAgICAgIHNlbGYudHJpYnV0ZV9yZWZ1c2VkX2J5OiBMaXN0W2ludF0gPSBbXSAgIyDmipfotKHmiJDlip/mlrnvvIjmjIHlj4zlpKfnjovogIXvvIkKICAgICAgICBzZWxmLnJvdW5kX3Jlc3VsdDogT3B0aW9uYWxbZGljdF0gPSBOb25lCiAgICAgICAgc2VsZi5tYXRjaF93aW5uZXI6IE9wdGlvbmFsW2ludF0gPSBOb25lCiAgICAgICAgc2VsZi5uZXh0X2xlYWRlciA9IDAKICAgICAgICBzZWxmLmxvZzogTGlzdFtzdHJdID0gW10KICAgICAgICBzZWxmLnBsYXllZF9jYXJkczogTGlzdFtDYXJkXSA9IFtdICAgIyDmnKzlsYDlt7LmiZPlh7rnmoTlrp7kvZPniYzvvIjorrDniYzlmajmlbDmja7mupDvvIkKICAgICAgICBzZWxmLnN0YXJ0X21hdGNoKCkKCiAgICAjIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSDln7rnoYAKICAgIEBzdGF0aWNtZXRob2QKICAgIGRlZiB0ZWFtX29mKHBpZDogaW50KSAtPiBpbnQ6CiAgICAgICAgcmV0dXJuIHBpZCAlIDIKCiAgICBAc3RhdGljbWV0aG9kCiAgICBkZWYgcGFydG5lcihwaWQ6IGludCkgLT4gaW50OgogICAgICAgIHJldHVybiAocGlkICsgMikgJSA0CgogICAgQHByb3BlcnR5CiAgICBkZWYgbGV2ZWwoc2VsZikgLT4gaW50OgogICAgICAgIHJldHVybiBzZWxmLmxldmVsc1tzZWxmLnBsYXlpbmdfdGVhbV0KCiAgICBkZWYgaGFuZF9jb3VudChzZWxmLCBwaWQ6IGludCkgLT4gaW50OgogICAgICAgIHJldHVybiBsZW4oc2VsZi5oYW5kc1twaWRdKQoKICAgIGRlZiBhY3RpdmVfcGxheWVycyhzZWxmKSAtPiBMaXN0W2ludF06CiAgICAgICAgcmV0dXJuIFtwIGZvciBwIGluIHJhbmdlKDQpIGlmIHAgbm90IGluIHNlbGYuZmluaXNoX29yZGVyXQoKICAgICMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tIOWPkeeJjAogICAgZGVmIHN0YXJ0X21hdGNoKHNlbGYpIC0+IE5vbmU6CiAgICAgICAgc2VsZi5sZXZlbHMgPSB7MDogMiwgMTogMn0KICAgICAgICBzZWxmLnBsYXlpbmdfdGVhbSA9IDAKICAgICAgICBzZWxmLnJvdW5kX251bWJlciA9IDAKICAgICAgICBzZWxmLm1hdGNoX3dpbm5lciA9IE5vbmUKICAgICAgICBzZWxmLnRyaWJ1dGVfcGFpcnMgPSBbXQogICAgICAgIHNlbGYubmV4dF9sZWFkZXIgPSAwCiAgICAgICAgc2VsZi5fZGVhbF9yb3VuZChsZWFkZXI9MCkKCiAgICBkZWYgX2RlYWxfcm91bmQoc2VsZiwgbGVhZGVyOiBpbnQpIC0+IE5vbmU6CiAgICAgICAgZGVjayA9IGJ1aWxkX2RlY2soKQogICAgICAgIGFzc2VydCBsZW4oZGVjaykgPT0gMTA4CiAgICAgICAgc2VsZi5ybmcuc2h1ZmZsZShkZWNrKQogICAgICAgIHNlbGYuaGFuZHMgPSB7aTogZGVja1tpICogc2VsZi5IQU5EX1NJWkU6KGkgKyAxKSAqIHNlbGYuSEFORF9TSVpFXQogICAgICAgICAgICAgICAgICAgICAgZm9yIGkgaW4gcmFuZ2UoNCl9CiAgICAgICAgYXNzZXJ0IGFsbChsZW4oaCkgPT0gc2VsZi5IQU5EX1NJWkUgZm9yIGggaW4gc2VsZi5oYW5kcy52YWx1ZXMoKSkKICAgICAgICBzZWxmLnJvdW5kX251bWJlciArPSAxCiAgICAgICAgc2VsZi5maW5pc2hfb3JkZXIgPSBbXQogICAgICAgIHNlbGYucGxheWVkX2NhcmRzID0gW10KICAgICAgICBzZWxmLmxhc3RfcGxheSA9IE5vbmUKICAgICAgICBzZWxmLnRyaWNrX2Rpc3BsYXlzID0ge30KICAgICAgICBzZWxmLnBhc3NlZF9zaW5jZSA9IHNldCgpCiAgICAgICAgc2VsZi50cmlidXRlX2RvbmUgPSB7fQogICAgICAgIHNlbGYucmV0dXJuX2RvbmUgPSB7fQogICAgICAgIHNlbGYudHJpYnV0ZV9yZWZ1c2VkID0gRmFsc2UKICAgICAgICBzZWxmLnRyaWJ1dGVfZGlzcGxheXMgPSB7fQogICAgICAgIHNlbGYudHJpYnV0ZV9yZWZ1c2VkX2J5ID0gW10KICAgICAgICBzZWxmLnJvdW5kX3Jlc3VsdCA9IE5vbmUKICAgICAgICBpZiBzZWxmLnRyaWJ1dGVfcGFpcnM6CiAgICAgICAgICAgIGJpZ19jb3VudCA9IHN1bSgKICAgICAgICAgICAgICAgIDEgZm9yIGcsIF8gaW4gc2VsZi50cmlidXRlX3BhaXJzCiAgICAgICAgICAgICAgICBmb3IgYyBpbiBzZWxmLmhhbmRzW2ddIGlmIGMucmFuayA9PSBCSUdfSk9LRVIKICAgICAgICAgICAgKQogICAgICAgICAgICBpZiBiaWdfY291bnQgPj0gMjoKICAgICAgICAgICAgICAgIHNlbGYudHJpYnV0ZV9yZWZ1c2VkID0gVHJ1ZQogICAgICAgICAgICAgICAgc2VsZi50cmlidXRlX3JlZnVzZWRfYnkgPSBbZyBmb3IgZywgXyBpbiBzZWxmLnRyaWJ1dGVfcGFpcnNdCiAgICAgICAgICAgICAgICBzZWxmLnRyaWJ1dGVfcGFpcnMgPSBbXQogICAgICAgICAgICAgICAgc2VsZi5uZXh0X2xlYWRlciA9IGdldGF0dHIoc2VsZiwgIl9yb3VuZF9oZWFkIiwgbGVhZGVyKQogICAgICAgICAgICAgICAgc2VsZi5waGFzZSA9ICJwbGF5aW5nIgogICAgICAgICAgICAgICAgc2VsZi50dXJuID0gc2VsZi5uZXh0X2xlYWRlcgogICAgICAgICAgICAgICAgc2VsZi5sb2cuYXBwZW5kKCLmipfotKHmiJDlip/vvIzlpLTmuLjlhYjlh7oiKQogICAgICAgICAgICBlbHNlOgogICAgICAgICAgICAgICAgc2VsZi5uZXh0X2xlYWRlciA9IGdldGF0dHIoc2VsZiwgIl9yb3VuZF9sYXN0IiwgbGVhZGVyKQogICAgICAgICAgICAgICAgc2VsZi5waGFzZSA9ICJ0cmlidXRlIgogICAgICAgICAgICAgICAgc2VsZi50dXJuID0gc2VsZi50cmlidXRlX3BhaXJzWzBdWzBdCiAgICAgICAgZWxzZToKICAgICAgICAgICAgc2VsZi5waGFzZSA9ICJwbGF5aW5nIgogICAgICAgICAgICBzZWxmLnR1cm4gPSBsZWFkZXIKICAgICAgICBzZWxmLmxvZy5hcHBlbmQoZiI9PT0g56yse3NlbGYucm91bmRfbnVtYmVyfeWxgCDmiZN7c2VsZi5fcmFua190ZXh0KHNlbGYubGV2ZWwpfSDpppblh7pQe3NlbGYudHVybn0gPT09IikKCiAgICBkZWYgX3JhbmtfdGV4dChzZWxmLCByYW5rOiBpbnQpIC0+IHN0cjoKICAgICAgICBmcm9tIGNhcmRzIGltcG9ydCBSQU5LX0xBQkVMUwogICAgICAgIHJldHVybiBSQU5LX0xBQkVMU1tyYW5rXQoKICAgICMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tIOi/m+i0oei/mOi0oQogICAgZGVmIGxlZ2FsX3RyaWJ1dGVfY2FyZHMoc2VsZiwgZ2l2ZXI6IGludCkgLT4gTGlzdFtDYXJkXToKICAgICAgICAiIiLov5votKHlgJnpgInvvJrmiYvkuK3mnIDlpKfniYzvvIjpgKLkurrphY3pmaTlpJbvvJvoi6XlhajkuLrpgKLkurrphY3liJnlj5bmnIDlpKfvvInjgIIiIiIKICAgICAgICBoYW5kID0gc2VsZi5oYW5kc1tnaXZlcl0KICAgICAgICBsZXZlbCA9IHNlbGYubGV2ZWwKICAgICAgICBub25fd2lsZCA9IFtjIGZvciBjIGluIGhhbmQgaWYgbm90IGMuaXNfd2lsZChsZXZlbCldCiAgICAgICAgcG9vbCA9IG5vbl93aWxkIGlmIG5vbl93aWxkIGVsc2UgaGFuZAogICAgICAgIGJlc3QgPSBtYXgocG9pbnRfdmFsdWUoYy5yYW5rLCBsZXZlbCkgZm9yIGMgaW4gcG9vbCkKICAgICAgICByZXR1cm4gW2MgZm9yIGMgaW4gcG9vbCBpZiBwb2ludF92YWx1ZShjLnJhbmssIGxldmVsKSA9PSBiZXN0XQoKICAgIGRlZiBzdWJtaXRfdHJpYnV0ZShzZWxmLCBnaXZlcjogaW50LCBlaWQ6IGludCkgLT4gQ2FyZDoKICAgICAgICBpZiBzZWxmLnBoYXNlICE9ICJ0cmlidXRlIjoKICAgICAgICAgICAgcmFpc2UgR2FtZUVycm9yKCLlvZPliY3kuI3lnKjov5votKHpmLbmrrUiKQogICAgICAgIHBlbmRpbmcgPSBbKGcsIHIpIGZvciBnLCByIGluIHNlbGYudHJpYnV0ZV9wYWlycyBpZiBnIG5vdCBpbiBzZWxmLnRyaWJ1dGVfZG9uZV0KICAgICAgICBtYXRjaCA9IG5leHQoKChnLCByKSBmb3IgZywgciBpbiBwZW5kaW5nIGlmIGcgPT0gZ2l2ZXIpLCBOb25lKQogICAgICAgIGlmIG1hdGNoIGlzIE5vbmU6CiAgICAgICAgICAgIHJhaXNlIEdhbWVFcnJvcihmIlB7Z2l2ZXJ9IOaXoOW+hei/m+i0oeS7u+WKoSIpCiAgICAgICAgbGVnYWwgPSBzZWxmLmxlZ2FsX3RyaWJ1dGVfY2FyZHMoZ2l2ZXIpCiAgICAgICAgY2FyZCA9IG5leHQoKGMgZm9yIGMgaW4gbGVnYWwgaWYgYy5laWQgPT0gZWlkKSwgTm9uZSkKICAgICAgICBpZiBjYXJkIGlzIE5vbmU6CiAgICAgICAgICAgIHJhaXNlIElsbGVnYWxQbGF5RXJyb3IoIui/m+i0oeeJjOW/hemhu+S4uuaJi+S4reacgOWkp+eJjO+8iOmAouS6uumFjemZpOWklu+8iSIpCiAgICAgICAgcmVjZWl2ZXIgPSBtYXRjaFsxXQogICAgICAgIHNlbGYuaGFuZHNbZ2l2ZXJdLnJlbW92ZShjYXJkKQogICAgICAgIHNlbGYuaGFuZHNbcmVjZWl2ZXJdLmFwcGVuZChjYXJkKQogICAgICAgIHNlbGYudHJpYnV0ZV9kb25lW2dpdmVyXSA9IHJlY2VpdmVyCiAgICAgICAgc2VsZi50cmlidXRlX2Rpc3BsYXlzW2dpdmVyXSA9IHsia2luZCI6ICJ0cmlidXRlIiwgImNhcmQiOiBjYXJkfQogICAgICAgIHNlbGYubG9nLmFwcGVuZChmIlB7Z2l2ZXJ9IOi/m+i0oSB7Y2FyZC5sYWJlbCgpfSDnu5kgUHtyZWNlaXZlcn0iKQogICAgICAgIHNlbGYuX21heWJlX2ZpbmlzaF90cmlidXRlX3BoYXNlKCkKICAgICAgICByZXR1cm4gY2FyZAoKICAgIGRlZiBzdWJtaXRfcmV0dXJuKHNlbGYsIHJlY2VpdmVyOiBpbnQsIGVpZDogaW50KSAtPiBDYXJkOgogICAgICAgIGlmIHNlbGYucGhhc2UgIT0gInRyaWJ1dGUiOgogICAgICAgICAgICByYWlzZSBHYW1lRXJyb3IoIuW9k+WJjeS4jeWcqOi/mOi0oemYtuautSIpCiAgICAgICAgIyByZWNlaXZlciDlv4XpobvmmK8i5bey5pS25Yiw6L+b6LSh5LiU5bCa5pyq6L+Y6LShIueahOS4gOaWuQogICAgICAgIGdpdmVyID0gc2VsZi50cmlidXRlX2RvbmUuZ2V0KHJlY2VpdmVyKQogICAgICAgIGlmIGdpdmVyIGlzIE5vbmUgYW5kIHJlY2VpdmVyIG5vdCBpbiBzZWxmLnRyaWJ1dGVfZG9uZS52YWx1ZXMoKToKICAgICAgICAgICAgcmFpc2UgR2FtZUVycm9yKGYiUHtyZWNlaXZlcn0g5peg5b6F6L+Y6LSh5Lu75YqhIikKICAgICAgICBpZiByZWNlaXZlciBpbiBzZWxmLnJldHVybl9kb25lOgogICAgICAgICAgICByYWlzZSBHYW1lRXJyb3IoZiJQe3JlY2VpdmVyfSDlt7Lov5jotKEiKQogICAgICAgIGlmIGdpdmVyIGlzIE5vbmU6CiAgICAgICAgICAgIGdpdmVyID0gbmV4dChnIGZvciBnLCByIGluIHNlbGYudHJpYnV0ZV9kb25lLml0ZW1zKCkgaWYgciA9PSByZWNlaXZlcikKICAgICAgICBjYXJkID0gbmV4dCgoYyBmb3IgYyBpbiBzZWxmLmhhbmRzW3JlY2VpdmVyXSBpZiBjLmVpZCA9PSBlaWQpLCBOb25lKQogICAgICAgIGlmIGNhcmQgaXMgTm9uZToKICAgICAgICAgICAgcmFpc2UgSWxsZWdhbFBsYXlFcnJvcigi6L+Y6LSh54mM5LiN5Zyo5omL5LitIikKICAgICAgICBzZWxmLmhhbmRzW3JlY2VpdmVyXS5yZW1vdmUoY2FyZCkKICAgICAgICBzZWxmLmhhbmRzW2dpdmVyXS5hcHBlbmQoY2FyZCkKICAgICAgICBzZWxmLnJldHVybl9kb25lW3JlY2VpdmVyXSA9IGdpdmVyCiAgICAgICAgc2VsZi50cmlidXRlX2Rpc3BsYXlzW3JlY2VpdmVyXSA9IHsia2luZCI6ICJyZXR1cm4iLCAiY2FyZCI6IGNhcmR9CiAgICAgICAgc2VsZi5sb2cuYXBwZW5kKGYiUHtyZWNlaXZlcn0g6L+Y6LShIHtjYXJkLmxhYmVsKCl9IOe7mSBQe2dpdmVyfSIpCiAgICAgICAgc2VsZi5fbWF5YmVfZmluaXNoX3RyaWJ1dGVfcGhhc2UoKQogICAgICAgIHJldHVybiBjYXJkCgogICAgZGVmIF9tYXliZV9maW5pc2hfdHJpYnV0ZV9waGFzZShzZWxmKSAtPiBOb25lOgogICAgICAgIGlmIGxlbihzZWxmLnRyaWJ1dGVfZG9uZSkgPT0gbGVuKHNlbGYudHJpYnV0ZV9wYWlycykgYW5kIFwKICAgICAgICAgICAgICAgIGxlbihzZWxmLnJldHVybl9kb25lKSA9PSBsZW4oc2VsZi50cmlidXRlX3BhaXJzKToKICAgICAgICAgICAgc2VsZi5waGFzZSA9ICJwbGF5aW5nIgogICAgICAgICAgICBzZWxmLnR1cm4gPSBzZWxmLm5leHRfbGVhZGVyCiAgICAgICAgICAgICMg6L+b6LShL+i/mOi0oeWxleekuuS/neeVmeWIsOeJjOWxgOato+W8j+W8gOWni++8iGJlZ2luX3JvdW5k77yJ5pe25YaN5riF6ZmkCgogICAgZGVmIGJlZ2luX3JvdW5kKHNlbGYpIC0+IE5vbmU6CiAgICAgICAgIiIi54mM5bGA5q2j5byP5byA5aeL77ya5riF6Zmk6L+b6LShL+i/mOi0oS/mipfotKHnmoTlvIDlsYDlsZXnpLrjgIIiIiIKICAgICAgICBzZWxmLnRyaWJ1dGVfZGlzcGxheXMgPSB7fQogICAgICAgIHNlbGYudHJpYnV0ZV9yZWZ1c2VkX2J5ID0gW10KCiAgICAjIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSDlh7rniYwKICAgIGRlZiBwbGF5KHNlbGYsIHBpZDogaW50LCBjYXJkczogTGlzdFtDYXJkXSkgLT4gQ29tYm86CiAgICAgICAgaWYgc2VsZi5waGFzZSAhPSAicGxheWluZyI6CiAgICAgICAgICAgIHJhaXNlIElsbGVnYWxQbGF5RXJyb3IoIuW9k+WJjemYtuauteS4jeiDveWHuueJjCIpCiAgICAgICAgaWYgcGlkICE9IHNlbGYudHVybjoKICAgICAgICAgICAgcmFpc2UgTm90UGxheWVyVHVybkVycm9yKGYi5pyq5YiwIFB7cGlkfSDnmoTlm57lkIgiKQogICAgICAgIGlmIG5vdCBjYXJkczoKICAgICAgICAgICAgcmFpc2UgSWxsZWdhbFBsYXlFcnJvcigi5Ye654mM5LiN6IO95Li656m6IikKICAgICAgICBlaWRzID0gW2MuZWlkIGZvciBjIGluIGNhcmRzXQogICAgICAgIGlmIGxlbihzZXQoZWlkcykpICE9IGxlbihlaWRzKToKICAgICAgICAgICAgcmFpc2UgSWxsZWdhbFBsYXlFcnJvcigi5a2Y5Zyo6YeN5aSN5a6e5L2T54mMIikKICAgICAgICBieV9laWQgPSB7Yy5laWQ6IGMgZm9yIGMgaW4gc2VsZi5oYW5kc1twaWRdfQogICAgICAgIHJlYWwgPSBbYnlfZWlkLmdldChlKSBmb3IgZSBpbiBlaWRzXQogICAgICAgIGlmIGFueShjIGlzIE5vbmUgZm9yIGMgaW4gcmVhbCk6CiAgICAgICAgICAgIHJhaXNlIElsbGVnYWxQbGF5RXJyb3IoIuWHuueJjOWMheWQq+mdnuW9k+WJjeaJi+eJjOeahOWunuS9k+eJjCIpCiAgICAgICAgcHJldiA9IHNlbGYubGFzdF9wbGF5WzFdIGlmIHNlbGYubGFzdF9wbGF5IGVsc2UgTm9uZQogICAgICAgIGNvbWJvID0gY2FuX3BsYXkocmVhbCwgcHJldiwgc2VsZi5sZXZlbCkKICAgICAgICBpZiBjb21ibyBpcyBOb25lOgogICAgICAgICAgICByYWlzZSBJbGxlZ2FsUGxheUVycm9yKCLpnZ7ms5Xlh7rniYzvvJrniYzlnovkuI3miJDnq4vmiJbljovkuI3ov4flvZPliY3niYwiKQogICAgICAgIGlmIHNlbGYubGFzdF9wbGF5IGlzIE5vbmU6CiAgICAgICAgICAgIHNlbGYudHJpYnV0ZV9kaXNwbGF5cyA9IHt9ICAgIyDniYzlsYDlvIDlp4vvvJrmuIXpmaTov5votKEv6L+Y6LSh5bGV56S6CiAgICAgICAgZm9yIGMgaW4gcmVhbDoKICAgICAgICAgICAgc2VsZi5oYW5kc1twaWRdLnJlbW92ZShjKQogICAgICAgIHNlbGYucGxheWVkX2NhcmRzLmV4dGVuZChyZWFsKQogICAgICAgIHNlbGYubGFzdF9wbGF5ID0gKHBpZCwgY29tYm8pCiAgICAgICAgc2VsZi50cmlja19kaXNwbGF5c1twaWRdID0geyJhY3Rpb24iOiAicGxheSIsICJjb21ibyI6IGNvbWJvfQogICAgICAgIHNlbGYucGFzc2VkX3NpbmNlID0gc2V0KCkKICAgICAgICBzZWxmLmxvZy5hcHBlbmQoZiJQe3BpZH0g5Ye6IHtjb21iby5kZXNjcmliZSgpfSIpCiAgICAgICAgaWYgbm90IHNlbGYuaGFuZHNbcGlkXToKICAgICAgICAgICAgc2VsZi5maW5pc2hfb3JkZXIuYXBwZW5kKHBpZCkKICAgICAgICAgICAgc2VsZi5sb2cuYXBwZW5kKGYiUHtwaWR9IOaIkOS4uuesrHtsZW4oc2VsZi5maW5pc2hfb3JkZXIpfea4uCIpCiAgICAgICAgICAgICMg5LiA5pa55Lik5a625YWo6YOo5Ye65a6M77ya5pys5bGA57uT5p2f77yM5pyq5omT5a6M55qE55u05o6l6K6w5pyr5ri477yI5peg6ZyA57un57ut5omT77yJCiAgICAgICAgICAgIGlmIHN1bSgxIGZvciBwIGluIHNlbGYuZmluaXNoX29yZGVyCiAgICAgICAgICAgICAgICAgICBpZiBzZWxmLnRlYW1fb2YocCkgPT0gc2VsZi50ZWFtX29mKHBpZCkpID09IDI6CiAgICAgICAgICAgICAgICByZXN0ID0gc2VsZi5hY3RpdmVfcGxheWVycygpCiAgICAgICAgICAgICAgICBzZWxmLmZpbmlzaF9vcmRlci5leHRlbmQocmVzdCkKICAgICAgICAgICAgICAgIGlmIHJlc3Q6CiAgICAgICAgICAgICAgICAgICAgc2VsZi5sb2cuYXBwZW5kKAogICAgICAgICAgICAgICAgICAgICAgICBmIntzZWxmLnRlYW1fb2YocGlkKX3pmJ/kuKTlrrblh7rlrozvvIwiCiAgICAgICAgICAgICAgICAgICAgICAgICsgIuOAgSIuam9pbihmIlB7cH0iIGZvciBwIGluIHJlc3QpICsgIuiusOacq+a4uCIpCiAgICAgICAgICAgICAgICBzZWxmLl9lbmRfcm91bmQoYXV0b19sYXN0PXJlc3QpCiAgICAgICAgICAgICAgICByZXR1cm4gY29tYm8KICAgICAgICBpZiBsZW4oc2VsZi5maW5pc2hfb3JkZXIpID09IDM6CiAgICAgICAgICAgIHNlbGYuX2VuZF9yb3VuZCgpCiAgICAgICAgZWxzZToKICAgICAgICAgICAgc2VsZi5fYWR2YW5jZSgpCiAgICAgICAgcmV0dXJuIGNvbWJvCgogICAgZGVmIHBhc3NfcGxheShzZWxmLCBwaWQ6IGludCkgLT4gTm9uZToKICAgICAgICBpZiBzZWxmLnBoYXNlICE9ICJwbGF5aW5nIjoKICAgICAgICAgICAgcmFpc2UgSWxsZWdhbFBsYXlFcnJvcigi5b2T5YmN6Zi25q615LiN6IO96L+H54mMIikKICAgICAgICBpZiBwaWQgIT0gc2VsZi50dXJuOgogICAgICAgICAgICByYWlzZSBOb3RQbGF5ZXJUdXJuRXJyb3IoZiLmnKrliLAgUHtwaWR9IOeahOWbnuWQiCIpCiAgICAgICAgaWYgc2VsZi5sYXN0X3BsYXkgaXMgTm9uZSBvciBzZWxmLmxhc3RfcGxheVswXSA9PSBwaWQ6CiAgICAgICAgICAgIHJhaXNlIElsbGVnYWxQbGF5RXJyb3IoIuS4u+WKqOWHuueJjOaXtuS4jeiDvei/h+eJjCIpCiAgICAgICAgc2VsZi5wYXNzZWRfc2luY2UuYWRkKHBpZCkKICAgICAgICBzZWxmLnRyaWNrX2Rpc3BsYXlzW3BpZF0gPSB7ImFjdGlvbiI6ICJwYXNzIiwgImNvbWJvIjogTm9uZX0KICAgICAgICBzZWxmLmxvZy5hcHBlbmQoZiJQe3BpZH0g6L+H54mMIikKICAgICAgICBzZWxmLl9hZHZhbmNlKCkKCiAgICBkZWYgX25leHRfYWN0aXZlKHNlbGYsIGZyb21fcGlkOiBpbnQpIC0+IGludDoKICAgICAgICBmb3IgaSBpbiByYW5nZSgxLCA1KToKICAgICAgICAgICAgcCA9IChmcm9tX3BpZCArIGkpICUgNAogICAgICAgICAgICBpZiBwIG5vdCBpbiBzZWxmLmZpbmlzaF9vcmRlcjoKICAgICAgICAgICAgICAgIHJldHVybiBwCiAgICAgICAgcmV0dXJuIGZyb21fcGlkCgogICAgZGVmIF9hZHZhbmNlKHNlbGYpIC0+IE5vbmU6CiAgICAgICAgb3duZXIgPSBzZWxmLmxhc3RfcGxheVswXSBpZiBzZWxmLmxhc3RfcGxheSBlbHNlIE5vbmUKICAgICAgICBhY3RpdmUgPSBzZWxmLmFjdGl2ZV9wbGF5ZXJzKCkKICAgICAgICBpZiBvd25lciBpcyBub3QgTm9uZToKICAgICAgICAgICAgb3RoZXJzID0gW3AgZm9yIHAgaW4gYWN0aXZlIGlmIHAgIT0gb3duZXJdCiAgICAgICAgICAgIGlmIG90aGVycyBhbmQgYWxsKHAgaW4gc2VsZi5wYXNzZWRfc2luY2UgZm9yIHAgaW4gb3RoZXJzKToKICAgICAgICAgICAgICAgICMg5pys6L2u54mM5p2D57uT566X77ya5Zue5ZCI57uT5p2f77yM5riF6Zmk5ZCE546p5a625Ye654mM5bGV56S677yI5LiL5LiA6L2u5Ye654mM5byA5aeL77yJCiAgICAgICAgICAgICAgICBzZWxmLnBhc3NlZF9zaW5jZSA9IHNldCgpCiAgICAgICAgICAgICAgICBzZWxmLmxhc3RfcGxheSA9IE5vbmUKICAgICAgICAgICAgICAgIHNlbGYudHJpY2tfZGlzcGxheXMgPSB7fQogICAgICAgICAgICAgICAgaWYgb3duZXIgaW4gYWN0aXZlOgogICAgICAgICAgICAgICAgICAgIHNlbGYudHVybiA9IG93bmVyCiAgICAgICAgICAgICAgICBlbHNlOgogICAgICAgICAgICAgICAgICAgIHB0ID0gc2VsZi5wYXJ0bmVyKG93bmVyKQogICAgICAgICAgICAgICAgICAgIHNlbGYudHVybiA9IHB0IGlmIHB0IGluIGFjdGl2ZSBlbHNlIHNlbGYuX25leHRfYWN0aXZlKG93bmVyKQogICAgICAgICAgICAgICAgICAgIGlmIHB0IG5vdCBpbiBhY3RpdmU6CiAgICAgICAgICAgICAgICAgICAgICAgIHNlbGYubG9nLmFwcGVuZChmIlB7b3duZXJ9IOWHuuWujOaXoOS6uuaOpe+8jOWvueWutuW3suWHuuWujO+8jOmhuuW7tummluWHuiIpCiAgICAgICAgICAgICAgICAgICAgZWxzZToKICAgICAgICAgICAgICAgICAgICAgICAgc2VsZi5sb2cuYXBwZW5kKGYi5o6l6aOO77yaUHtwdH0g6aaW5Ye6IikKICAgICAgICAgICAgICAgIHJldHVybgogICAgICAgIHNlbGYudHVybiA9IHNlbGYuX25leHRfYWN0aXZlKHNlbGYudHVybikKCiAgICAjIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSDnu5PnrpcKICAgIGRlZiBfZW5kX3JvdW5kKHNlbGYsIGF1dG9fbGFzdDogT3B0aW9uYWxbTGlzdFtpbnRdXSA9IE5vbmUpIC0+IE5vbmU6CiAgICAgICAgZm8gPSBsaXN0KHNlbGYuZmluaXNoX29yZGVyKQogICAgICAgIGlmIGxlbihmbykgPCA0OgogICAgICAgICAgICB0YWlsID0gbmV4dChwIGZvciBwIGluIHJhbmdlKDQpIGlmIHAgbm90IGluIGZvKQogICAgICAgICAgICBmby5hcHBlbmQodGFpbCkKICAgICAgICAgICAgYXV0b19sYXN0ID0gbGlzdChhdXRvX2xhc3Qgb3IgW10pICsgW3RhaWxdCiAgICAgICAgaGVhZCwgc2Vjb25kLCB0aGlyZCwgbGFzdCA9IGZvCiAgICAgICAgd3QgPSBzZWxmLnRlYW1fb2YoaGVhZCkKICAgICAgICBpZiBzZWxmLnRlYW1fb2Yoc2Vjb25kKSA9PSB3dDoKICAgICAgICAgICAgZGVsdGEgPSAzCiAgICAgICAgZWxpZiBzZWxmLnRlYW1fb2YodGhpcmQpID09IHd0OgogICAgICAgICAgICBkZWx0YSA9IDIKICAgICAgICBlbHNlOgogICAgICAgICAgICBkZWx0YSA9IDEKICAgICAgICBzZWxmLnJvdW5kX3Jlc3VsdCA9IHsKICAgICAgICAgICAgImZpbmlzaF9vcmRlciI6IGZvLAogICAgICAgICAgICAid2lubmVyX3RlYW0iOiB3dCwKICAgICAgICAgICAgImRlbHRhIjogZGVsdGEsCiAgICAgICAgICAgICJkb3VibGVfZG93biI6IHNlbGYudGVhbV9vZihzZWNvbmQpID09IHd0LAogICAgICAgICAgICAiYXV0b19sYXN0IjogbGlzdChhdXRvX2xhc3Qgb3IgW10pLCAgIyDmnKrmiZPlrozooqvorrDkuLrmnKvmuLjnmoTnjqnlrrYKICAgICAgICB9CiAgICAgICAgc2VsZi5sb2cuYXBwZW5kKAogICAgICAgICAgICBmIuacrOWxgOe7k+adnyDlkI3mrKFQe2hlYWR9PlB7c2Vjb25kfT5Qe3RoaXJkfT5Qe2xhc3R977yMe3d0femYn+WNh3tkZWx0YX3nuqciKQogICAgICAgIGlmIHNlbGYucGxheWluZ190ZWFtID09IHd0IGFuZCBzZWxmLmxldmVsc1t3dF0gPT0gMTQ6CiAgICAgICAgICAgIHNlbGYucGhhc2UgPSAibWF0Y2hfb3ZlciIKICAgICAgICAgICAgc2VsZi5tYXRjaF93aW5uZXIgPSB3dAogICAgICAgICAgICBzZWxmLmxvZy5hcHBlbmQoZiJ7d3R96Zif5omT6L+HQe+8jOavlOi1m+e7k+adnyIpCiAgICAgICAgICAgIHJldHVybgogICAgICAgIHNlbGYubGV2ZWxzW3d0XSA9IG1pbigxNCwgc2VsZi5sZXZlbHNbd3RdICsgZGVsdGEpCiAgICAgICAgc2VsZi5wbGF5aW5nX3RlYW0gPSB3dAogICAgICAgICMg6L+b6LSh6K6h5YiS77yI5Y+R5paw54mM5ZCO5omn6KGM77yJ77yb5L+d5a2Y5aS05ri4L+acq+a4uOeUqOS6juaKl+i0oeWIpOWumummluWHuuiAhQogICAgICAgIHNlbGYuX3JvdW5kX2hlYWQgPSBoZWFkCiAgICAgICAgc2VsZi5fcm91bmRfbGFzdCA9IGxhc3QKICAgICAgICBpZiBzZWxmLnRlYW1fb2Yoc2Vjb25kKSA9PSB3dDogICMg5Y+M5LiL77ya5pyr5ri44oaS5aS05ri477yM5LiJ5ri44oaS5LqM5ri4CiAgICAgICAgICAgIHNlbGYudHJpYnV0ZV9wYWlycyA9IFsobGFzdCwgaGVhZCksICh0aGlyZCwgc2Vjb25kKV0KICAgICAgICBlbHNlOgogICAgICAgICAgICBzZWxmLnRyaWJ1dGVfcGFpcnMgPSBbKGxhc3QsIGhlYWQpXQogICAgICAgIHNlbGYucGhhc2UgPSAicm91bmRfb3ZlciIKCiAgICBkZWYgc3RhcnRfbmV4dF9yb3VuZChzZWxmKSAtPiBOb25lOgogICAgICAgIGlmIHNlbGYucGhhc2UgPT0gIm1hdGNoX292ZXIiOgogICAgICAgICAgICByYWlzZSBHYW1lRXJyb3IoIuavlOi1m+W3sue7k+adnyIpCiAgICAgICAgaWYgc2VsZi5waGFzZSAhPSAicm91bmRfb3ZlciI6CiAgICAgICAgICAgIHJhaXNlIEdhbWVFcnJvcigi5pys5bGA5bCa5pyq57uT5p2fIikKICAgICAgICBzZWxmLl9kZWFsX3JvdW5kKGxlYWRlcj1zZWxmLm5leHRfbGVhZGVyKQo=
+"""牌局状态与流程控制。
+
+职责：发牌、回合流转、合法出牌校验（统一委托 rules 引擎）、进贡还贡、
+接风、升级逻辑、胜负判定。本模块不包含任何 UI 或 AI 策略逻辑。
+
+座位与队伍：0=人类玩家（下方），1=右家AI，2=对家AI（上方），3=左家AI。
+队伍：0队={0,2}，1队={1,3}，按 0→1→2→3 轮转。
+
+规则要点（V1.0 通用标准，待确认项见 README/变更摘要）：
+- 升级：双下+3、头游+三游+2、头游+末游+1，封顶 A(14)。
+- 一方两家全部出完即本局结束，未打完的两家直接记末游。
+- 打 A 的队伍拿到头游即获胜（若需"打A必须双下"为变体规则，待确认）。
+- 进贡：发牌后，末游向头游进手中最大牌（红桃级牌/逢人配除外，若全为逢人配则进最大）；
+  双下时三游另向二游进贡。进贡方合计持有两张大王可抗贡。
+- 还贡：受贡方任意还一张。
+- 下一局首出：进贡方（末游）先出；抗贡则头游先出。
+- 接风：最后出牌者出完且其余各家均过牌，则由其对家接风首出。
+"""
+from __future__ import annotations
+
+import random
+from typing import Dict, List, Optional, Tuple
+
+from cards import BIG_JOKER, Card, build_deck, point_value
+from rules import Combo, RuleConfig, can_play
+
+
+class GameError(Exception):
+    pass
+
+
+class IllegalPlayError(GameError):
+    pass
+
+
+class NotPlayerTurnError(GameError):
+    pass
+
+
+class GuandanGame:
+    HAND_SIZE = RuleConfig.HAND_SIZE
+    PLAYERS = RuleConfig.PLAYERS
+
+    def __init__(self, rng: Optional[random.Random] = None) -> None:
+        self.rng = rng or random.Random()
+        self.levels: Dict[int, int] = {0: 2, 1: 2}
+        self.playing_team = 0
+        self.round_number = 0
+        self.phase = "setup"  # setup | playing | tribute | round_over | match_over
+        self.hands: Dict[int, List[Card]] = {i: [] for i in range(4)}
+        self.turn = 0
+        self.last_play: Optional[Tuple[int, Combo]] = None
+        self.trick_displays: Dict[int, dict] = {}  # pid -> {"action": "play"/"pass", "combo": Combo}
+        self.passed_since: set = set()
+        self.finish_order: List[int] = []
+        self.tribute_pairs: List[Tuple[int, int]] = []  # (giver, receiver)
+        self.tribute_done: Dict[int, int] = {}  # giver -> receiver
+        self.return_done: Dict[int, int] = {}  # receiver -> giver
+        self.tribute_refused = False
+        self.tribute_displays: Dict[int, dict] = {}  # pid -> {"kind": "tribute"/"return", "card": Card}
+        self.tribute_refused_by: List[int] = []  # 抗贡成功方（持双大王者）
+        self.round_result: Optional[dict] = None
+        self.match_winner: Optional[int] = None
+        self.next_leader = 0
+        self.log: List[str] = []
+        self.played_cards: List[Card] = []   # 本局已打出的实体牌（记牌器数据源）
+        self.start_match()
+
+    # ------------------------------------------------------------------ 基础
+    @staticmethod
+    def team_of(pid: int) -> int:
+        return pid % 2
+
+    @staticmethod
+    def partner(pid: int) -> int:
+        return (pid + 2) % 4
+
+    @property
+    def level(self) -> int:
+        return self.levels[self.playing_team]
+
+    def hand_count(self, pid: int) -> int:
+        return len(self.hands[pid])
+
+    def active_players(self) -> List[int]:
+        return [p for p in range(4) if p not in self.finish_order]
+
+    # ------------------------------------------------------------------ 发牌
+    def start_match(self) -> None:
+        self.levels = {0: 2, 1: 2}
+        self.playing_team = 0
+        self.round_number = 0
+        self.match_winner = None
+        self.tribute_pairs = []
+        self.next_leader = 0
+        self._deal_round(leader=0)
+
+    def _deal_round(self, leader: int) -> None:
+        deck = build_deck()
+        assert len(deck) == 108
+        self.rng.shuffle(deck)
+        self.hands = {i: deck[i * self.HAND_SIZE:(i + 1) * self.HAND_SIZE]
+                      for i in range(4)}
+        assert all(len(h) == self.HAND_SIZE for h in self.hands.values())
+        self.round_number += 1
+        self.finish_order = []
+        self.played_cards = []
+        self.last_play = None
+        self.trick_displays = {}
+        self.passed_since = set()
+        self.tribute_done = {}
+        self.return_done = {}
+        self.tribute_refused = False
+        self.tribute_displays = {}
+        self.tribute_refused_by = []
+        self.round_result = None
+        if self.tribute_pairs:
+            big_count = sum(
+                1 for g, _ in self.tribute_pairs
+                for c in self.hands[g] if c.rank == BIG_JOKER
+            )
+            if big_count >= 2:
+                self.tribute_refused = True
+                self.tribute_refused_by = [g for g, _ in self.tribute_pairs]
+                self.tribute_pairs = []
+                self.next_leader = getattr(self, "_round_head", leader)
+                self.phase = "playing"
+                self.turn = self.next_leader
+                self.log.append("抗贡成功，头游先出")
+            else:
+                self.next_leader = getattr(self, "_round_last", leader)
+                self.phase = "tribute"
+                self.turn = self.tribute_pairs[0][0]
+        else:
+            self.phase = "playing"
+            self.turn = leader
+        self.log.append(f"=== 第{self.round_number}局 打{self._rank_text(self.level)} 首出P{self.turn} ===")
+
+    def _rank_text(self, rank: int) -> str:
+        from cards import RANK_LABELS
+        return RANK_LABELS[rank]
+
+    # ------------------------------------------------------------------ 进贡还贡
+    def legal_tribute_cards(self, giver: int) -> List[Card]:
+        """进贡候选：手中最大牌（逢人配除外；若全为逢人配则取最大）。"""
+        hand = self.hands[giver]
+        level = self.level
+        non_wild = [c for c in hand if not c.is_wild(level)]
+        pool = non_wild if non_wild else hand
+        best = max(point_value(c.rank, level) for c in pool)
+        return [c for c in pool if point_value(c.rank, level) == best]
+
+    def submit_tribute(self, giver: int, eid: int) -> Card:
+        if self.phase != "tribute":
+            raise GameError("当前不在进贡阶段")
+        pending = [(g, r) for g, r in self.tribute_pairs if g not in self.tribute_done]
+        match = next(((g, r) for g, r in pending if g == giver), None)
+        if match is None:
+            raise GameError(f"P{giver} 无待进贡任务")
+        legal = self.legal_tribute_cards(giver)
+        card = next((c for c in legal if c.eid == eid), None)
+        if card is None:
+            raise IllegalPlayError("进贡牌必须为手中最大牌（逢人配除外）")
+        receiver = match[1]
+        self.hands[giver].remove(card)
+        self.hands[receiver].append(card)
+        self.tribute_done[giver] = receiver
+        self.tribute_displays[giver] = {"kind": "tribute", "card": card}
+        self.log.append(f"P{giver} 进贡 {card.label()} 给 P{receiver}")
+        self._maybe_finish_tribute_phase()
+        return card
+
+    def submit_return(self, receiver: int, eid: int) -> Card:
+        if self.phase != "tribute":
+            raise GameError("当前不在还贡阶段")
+        # receiver 必须是"已收到进贡且尚未还贡"的一方
+        giver = self.tribute_done.get(receiver)
+        if giver is None and receiver not in self.tribute_done.values():
+            raise GameError(f"P{receiver} 无待还贡任务")
+        if receiver in self.return_done:
+            raise GameError(f"P{receiver} 已还贡")
+        if giver is None:
+            giver = next(g for g, r in self.tribute_done.items() if r == receiver)
+        card = next((c for c in self.hands[receiver] if c.eid == eid), None)
+        if card is None:
+            raise IllegalPlayError("还贡牌不在手中")
+        self.hands[receiver].remove(card)
+        self.hands[giver].append(card)
+        self.return_done[receiver] = giver
+        self.tribute_displays[receiver] = {"kind": "return", "card": card}
+        self.log.append(f"P{receiver} 还贡 {card.label()} 给 P{giver}")
+        self._maybe_finish_tribute_phase()
+        return card
+
+    def _maybe_finish_tribute_phase(self) -> None:
+        if len(self.tribute_done) == len(self.tribute_pairs) and \
+                len(self.return_done) == len(self.tribute_pairs):
+            self.phase = "playing"
+            self.turn = self.next_leader
+            # 进贡/还贡展示保留到牌局正式开始（begin_round）时再清除
+
+    def begin_round(self) -> None:
+        """牌局正式开始：清除进贡/还贡/抗贡的开局展示。"""
+        self.tribute_displays = {}
+        self.tribute_refused_by = []
+
+    # ------------------------------------------------------------------ 出牌
+    def play(self, pid: int, cards: List[Card]) -> Combo:
+        if self.phase != "playing":
+            raise IllegalPlayError("当前阶段不能出牌")
+        if pid != self.turn:
+            raise NotPlayerTurnError(f"未到 P{pid} 的回合")
+        if not cards:
+            raise IllegalPlayError("出牌不能为空")
+        eids = [c.eid for c in cards]
+        if len(set(eids)) != len(eids):
+            raise IllegalPlayError("存在重复实体牌")
+        by_eid = {c.eid: c for c in self.hands[pid]}
+        real = [by_eid.get(e) for e in eids]
+        if any(c is None for c in real):
+            raise IllegalPlayError("出牌包含非当前手牌的实体牌")
+        prev = self.last_play[1] if self.last_play else None
+        combo = can_play(real, prev, self.level)
+        if combo is None:
+            raise IllegalPlayError("非法出牌：牌型不成立或压不过当前牌")
+        if self.last_play is None:
+            self.tribute_displays = {}   # 牌局开始：清除进贡/还贡展示
+        for c in real:
+            self.hands[pid].remove(c)
+        self.played_cards.extend(real)
+        self.last_play = (pid, combo)
+        self.trick_displays[pid] = {"action": "play", "combo": combo}
+        self.passed_since = set()
+        self.log.append(f"P{pid} 出 {combo.describe()}")
+        if not self.hands[pid]:
+            self.finish_order.append(pid)
+            self.log.append(f"P{pid} 成为第{len(self.finish_order)}游")
+            # 一方两家全部出完：本局结束，未打完的直接记末游（无需继续打）
+            if sum(1 for p in self.finish_order
+                   if self.team_of(p) == self.team_of(pid)) == 2:
+                rest = self.active_players()
+                self.finish_order.extend(rest)
+                if rest:
+                    self.log.append(
+                        f"{self.team_of(pid)}队两家出完，"
+                        + "、".join(f"P{p}" for p in rest) + "记末游")
+                self._end_round(auto_last=rest)
+                return combo
+        if len(self.finish_order) == 3:
+            self._end_round()
+        else:
+            self._advance()
+        return combo
+
+    def pass_play(self, pid: int) -> None:
+        if self.phase != "playing":
+            raise IllegalPlayError("当前阶段不能过牌")
+        if pid != self.turn:
+            raise NotPlayerTurnError(f"未到 P{pid} 的回合")
+        if self.last_play is None or self.last_play[0] == pid:
+            raise IllegalPlayError("主动出牌时不能过牌")
+        self.passed_since.add(pid)
+        self.trick_displays[pid] = {"action": "pass", "combo": None}
+        self.log.append(f"P{pid} 过牌")
+        self._advance()
+
+    def _next_active(self, from_pid: int) -> int:
+        for i in range(1, 5):
+            p = (from_pid + i) % 4
+            if p not in self.finish_order:
+                return p
+        return from_pid
+
+    def _advance(self) -> None:
+        owner = self.last_play[0] if self.last_play else None
+        active = self.active_players()
+        if owner is not None:
+            others = [p for p in active if p != owner]
+            if others and all(p in self.passed_since for p in others):
+                # 本轮牌权结算：回合结束，清除各玩家出牌展示（下一轮出牌开始）
+                self.passed_since = set()
+                self.last_play = None
+                self.trick_displays = {}
+                if owner in active:
+                    self.turn = owner
+                else:
+                    pt = self.partner(owner)
+                    self.turn = pt if pt in active else self._next_active(owner)
+                    if pt not in active:
+                        self.log.append(f"P{owner} 出完无人接，对家已出完，顺延首出")
+                    else:
+                        self.log.append(f"接风：P{pt} 首出")
+                return
+        self.turn = self._next_active(self.turn)
+
+    # ------------------------------------------------------------------ 结算
+    def _end_round(self, auto_last: Optional[List[int]] = None) -> None:
+        fo = list(self.finish_order)
+        if len(fo) < 4:
+            tail = next(p for p in range(4) if p not in fo)
+            fo.append(tail)
+            auto_last = list(auto_last or []) + [tail]
+        head, second, third, last = fo
+        wt = self.team_of(head)
+        if self.team_of(second) == wt:
+            delta = 3
+        elif self.team_of(third) == wt:
+            delta = 2
+        else:
+            delta = 1
+        self.round_result = {
+            "finish_order": fo,
+            "winner_team": wt,
+            "delta": delta,
+            "double_down": self.team_of(second) == wt,
+            "auto_last": list(auto_last or []),  # 未打完被记为末游的玩家
+        }
+        self.log.append(
+            f"本局结束 名次P{head}>P{second}>P{third}>P{last}，{wt}队升{delta}级")
+        if self.playing_team == wt and self.levels[wt] == 14:
+            self.phase = "match_over"
+            self.match_winner = wt
+            self.log.append(f"{wt}队打过A，比赛结束")
+            return
+        self.levels[wt] = min(14, self.levels[wt] + delta)
+        self.playing_team = wt
+        # 进贡计划（发新牌后执行）；保存头游/末游用于抗贡判定首出者
+        self._round_head = head
+        self._round_last = last
+        if self.team_of(second) == wt:  # 双下：末游→头游，三游→二游
+            self.tribute_pairs = [(last, head), (third, second)]
+        else:
+            self.tribute_pairs = [(last, head)]
+        self.phase = "round_over"
+
+    def start_next_round(self) -> None:
+        if self.phase == "match_over":
+            raise GameError("比赛已结束")
+        if self.phase != "round_over":
+            raise GameError("本局尚未结束")
+        self._deal_round(leader=self.next_leader)

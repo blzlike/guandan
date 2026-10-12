@@ -1,1 +1,58 @@
-IyAtKi0gbW9kZTogcHl0aG9uIDsgY29kaW5nOiB1dGYtOCAtKi0KIiIiUHlJbnN0YWxsZXIg5Y2V5paH5Lu25omT5YyF77ya5o686JuL77yIV2luZG93cyDni6znq4sgZXhl77yJ44CCCgrmnoTlu7rvvJogIHB5dGhvbiAtbSBQeUluc3RhbGxlciBndWFuZGFuLnNwZWMgLS1ub2NvbmZpcm0K5Lqn54mp77yaICBkaXN0L0d1YW5kYW4uZXhl77yIb25lZmlsZe+8jOWPjOWHu+i/kOihjO+8iQror7TmmI7vvJoKLSDlj6ror7votYTmupDvvIhzb3VuZHMv44CB5aS05YOP44CB6IOM5pmv44CBbG9nb++8iemaj+WMheaJk+i/myBleGXvvIzov5DooYzml7bop6PljIXliLAgX01FSVBBU1PvvJsKLSBzZXR0aW5ncy5qc29uIOS4jeaJk+WMhe+8jOmmluasoei/kOihjOWQjuWcqCBleGUg5ZCM55uu5b2V55Sf5oiQ77yI5Y+v5oyB5LmF5YyW77yJ77ybCi0gV2luZG93cyDkuIvlrZfkvZPotbDns7vnu58gbXN5aCAvIFNlZ29lIFVJIFN5bWJvbO+8jGZvbnRzL05vdG8g5LiN5omT6L+bIGV4ZQogIO+8iOS7hSBBbmRyb2lkL0J1aWxkb3plciDpnIDopoHvvIzop4EgYnVpbGRvemVyLnNwZWPvvInvvJsKLSDkuI3lkKsgZ3N0cmVhbWVy77ya6Z+z6aKR6LWwIFNETDJfbWl4ZXLvvIhraXZ5X2RlcHMuc2RsMu+8ieOAggoiIiIKaW1wb3J0IG9zCmZyb20gUHlJbnN0YWxsZXIudXRpbHMuaG9va3MgaW1wb3J0IGNvbGxlY3RfZGF0YV9maWxlcywgY29sbGVjdF9keW5hbWljX2xpYnMKCmRhdGFzID0gWwogICAgKCJzb3VuZHMiLCAic291bmRzIiksCiAgICAoImF2YXRhcjAucG5nIiwgIi4iKSwgKCJhdmF0YXIxLnBuZyIsICIuIiksICgiYXZhdGFyMi5wbmciLCAiLiIpLCAoImF2YXRhcjMucG5nIiwgIi4iKSwKICAgICgiYmFja2dyb3VuZC5qcGciLCAiLiIpLCAoImxvZ28ucG5nIiwgIi4iKSwKXQpkYXRhcyArPSBjb2xsZWN0X2RhdGFfZmlsZXMoImtpdnkiKQoKYmluYXJpZXMgPSBbXQpmb3IgX3BrZyBpbiAoImtpdnlfZGVwcy5zZGwyIiwgImtpdnlfZGVwcy5nbGV3Iik6CiAgICB0cnk6CiAgICAgICAgYmluYXJpZXMgKz0gY29sbGVjdF9keW5hbWljX2xpYnMoX3BrZykKICAgIGV4Y2VwdCBFeGNlcHRpb246CiAgICAgICAgcGFzcwoKYSA9IEFuYWx5c2lzKAogICAgWyJtYWluLnB5Il0sCiAgICBwYXRoZXg9W1NQRUNQQVRIXSwKICAgIGJpbmFyaWVzPWJpbmFyaWVzLAogICAgZGF0YXM9ZGF0YXMsCiAgICBoaWRkZW5pbXBvcnRzPVsKICAgICAgICAia2l2eS5jb3JlLndpbmRvdy53aW5kb3dfc2RsMiIsCiAgICAgICAgImtpdnkuY29yZS50ZXh0LnRleHRfc2RsMiIsCiAgICAgICAgImtpdnkuY29yZS5pbWFnZS5pbWdfcGlsIiwKICAgICAgICAia2l2eS5jb3JlLmF1ZGlvLmF1ZGlvX3NkbDIiLAogICAgICAgICJraXZ5LmNvcmUuZ2wuZ2xfc2RsMiIsCiAgICBdLAogICAgZXhjbHVkZXM9WyJ0ZXN0cyIsICJweXRlc3QiLCAic291bmRmaWxlIl0sCiAgICBub2FyY2hpdmU9RmFsc2UsCikKcHl6ID0gUFlaKGEucHVyZSkKCmV4ZSA9IEVYRSgKICAgIHB5eiwKICAgIGEuc2NyaXB0cywKICAgIGEuYmluYXJpZXMsCiAgICBhLmRhdGFzLAogICAgW10sCiAgICBuYW1lPSJHdWFuZGFuIiwKICAgIGljb249b3MucGF0aC5qb2luKFNQRUNQQVRILCAibG9nby5pY28iKSwKICAgIGNvbnNvbGU9RmFsc2UsCiAgICBkaXNhYmxlX3dpbmRvd2VkX3RyYWNlYmFjaz1GYWxzZSwKICAgIHVweD1GYWxzZSwKKQo=
+# -*- mode: python ; coding: utf-8 -*-
+"""PyInstaller 单文件打包：掼蛋（Windows 独立 exe）。
+
+构建：  python -m PyInstaller guandan.spec --noconfirm
+产物：  dist/Guandan.exe（onefile，双击运行）
+说明：
+- 只读资源（sounds/、头像、背景、logo）随包打进 exe，运行时解包到 _MEIPASS；
+- settings.json 不打包，首次运行后在 exe 同目录生成（可持久化）；
+- Windows 下字体走系统 msyh / Segoe UI Symbol，fonts/Noto 不打进 exe
+  （仅 Android/Buildozer 需要，见 buildozer.spec）；
+- 不含 gstreamer：音频走 SDL2_mixer（kivy_deps.sdl2）。
+"""
+import os
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
+
+datas = [
+    ("sounds", "sounds"),
+    ("avatar0.png", "."), ("avatar1.png", "."), ("avatar2.png", "."), ("avatar3.png", "."),
+    ("background.jpg", "."), ("logo.png", "."),
+]
+datas += collect_data_files("kivy")
+
+binaries = []
+for _pkg in ("kivy_deps.sdl2", "kivy_deps.glew"):
+    try:
+        binaries += collect_dynamic_libs(_pkg)
+    except Exception:
+        pass
+
+a = Analysis(
+    ["main.py"],
+    pathex=[SPECPATH],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=[
+        "kivy.core.window.window_sdl2",
+        "kivy.core.text.text_sdl2",
+        "kivy.core.image.img_pil",
+        "kivy.core.audio.audio_sdl2",
+        "kivy.core.gl.gl_sdl2",
+    ],
+    excludes=["tests", "pytest", "soundfile"],
+    noarchive=False,
+)
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.datas,
+    [],
+    name="Guandan",
+    icon=os.path.join(SPECPATH, "logo.ico"),
+    console=False,
+    disable_windowed_traceback=False,
+    upx=False,
+)

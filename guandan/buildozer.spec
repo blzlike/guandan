@@ -1,1 +1,46 @@
-W2FwcF0KCiMg5bqU55So5Z+65pys5L+h5oGvCnRpdGxlID0g6aG65rqc5o686JuLCiMg5bqU55So5Zu+5qCH77ya5rqQ56CB5qC555uu5b2VIGxvZ28ucG5n77yIcG5nIOW3suWcqCBpbmNsdWRlX2V4dHMg5Lit6ZqP5YyF5omT5YyF77yJCmljb24uZmlsZW5hbWUgPSBsb2dvLnBuZwpwYWNrYWdlLm5hbWUgPSBndWFuZGFuCnZlcnNpb24gPSAxLjAKcGFja2FnZS5kb21haW4gPSBvcmcuZ3VhbmRhbgphdXRob3IgPSBndWFuZGFuCmF1dGhvci5lbWFpbCA9IHVua25vd25AZXhhbXBsZS5jb20KCiMg5rqQ56CB55uu5b2V5LiO5YWl5Y+jCnNvdXJjZS5kaXIgPSAuCnNvdXJjZS5tYWluY2xhc3MgPSBtYWluCnNvdXJjZS5pbmNsdWRlX2V4dHMgPSBweSxwbmcsanBnLGpwZWcsdHRmLG90Zixqc29uLG9nZyx3YXYKc291cmNlLmV4Y2x1ZGVfZGlycyA9IHRlc3RzLCBhc3NldHMsIOWbvueJh+i1hOa6kCwgYmluLCAuYnVpbGRvemVyLCAuZ3JhZGxlCnNvdXJjZS5leGNsdWRlX3BhdHRlcm5zID0gLnB5dGVzdF9jYWNoZS8qLCBfX3B5Y2FjaGVfXy8qLCAqL19fcHljYWNoZV9fLyosIC5pZGVhLyoKCiMg5L6d6LWW77yaS2l2eSAyLjMuMe+8iOS4juahjOmdouW8gOWPkeeJiOacrOS4gOiHtO+8iQpyZXF1aXJlbWVudHMgPSBweXRob24zLGtpdnk9PTIuMy4xCgojIOmUgeWumiBwNGEg5YiwIGRldmVsb3Ag5YiG5pSv77yIcDRhIOm7mOiupOWIhuaUr+S4uiBkZXZlbG9w77yMbWFzdGVyIOWIhuaUr+iQveWQjuS4lOS4jeWQq+S/ruWkje+8ie+8mgojIGRldmVsb3Ag5bey56e76Zmk5p6E5bu6IHZlbnYg5Lit55qEIHBpcCDoh6rmiJHljYfnuqfpgLvovpHvvIzop4Tpgb8gcGlwIDI2LjIuMSDnmoQKIyBCdWlsZERlcGVuZGVuY3lJbnN0YWxsRXJyb3Ig5a+85YWl57y66Zm35a+86Ie05a6J6KOF5L6d6LWW5bSp5rqDCnA0YS5icmFuY2ggPSBkZXZlbG9wCnA0YS5jb21taXQgPSBkOTdkODA3MTBjMDE0YmYyYjY1ZTBhOTc5ZTMxNzY1NjJlOTI0NTYyCgojIOaoquWxjyArIOWFqOWxjwpvcmllbnRhdGlvbiA9IGxhbmRzY2FwZQpmdWxsc2NyZWVuID0gMQoKIyDlronljZPmnoTlu7rlj4LmlbAKYW5kcm9pZC5hcGkgPSAzNAphbmRyb2lkLm1pbmFwaSA9IDIxCmFuZHJvaWQuYXJjaHMgPSBhcm02NC12OGEsIGFybWVhYmktdjdhCmFuZHJvaWQuYWNjZXB0X3Nka19saWNlbnNlID0gVHJ1ZQphbmRyb2lkLmFsbG93X2JhY2t1cCA9IFRydWUKCiMg6LCD6K+V54mIIEFQS++8iOS6keaehOW7uuS6p+eJqe+8jOWuieijheaXtumcgOWFgeiuuOacquefpeadpea6kO+8iQphbmRyb2lkLm1vZGUgPSBkZWJ1ZwoKW2J1aWxkb3plcl0KCmxvZ19sZXZlbCA9IDIKd2Fybl9vbl9yb290ID0gMAo=
+[app]
+
+# 应用基本信息
+title = 顺溜掼蛋
+# 应用图标：源码根目录 logo.png（png 已在 include_exts 中随包打包）
+icon.filename = logo.png
+package.name = guandan
+version = 1.0
+package.domain = org.guandan
+author = guandan
+author.email = unknown@example.com
+
+# 源码目录与入口
+source.dir = .
+source.mainclass = main
+source.include_exts = py,png,jpg,jpeg,ttf,otf,json,ogg,wav
+source.exclude_dirs = tests, assets, 图片资源, bin, .buildozer, .gradle
+source.exclude_patterns = .pytest_cache/*, __pycache__/*, */__pycache__/*, .idea/*
+
+# 依赖：Kivy 2.3.1（与桌面开发版本一致）
+requirements = python3,kivy==2.3.1
+
+# 锁定 p4a 到 develop 分支（p4a 默认分支为 develop，master 分支落后且不含修复）：
+# develop 已移除构建 venv 中的 pip 自我升级逻辑，规避 pip 26.2.1 的
+# BuildDependencyInstallError 导入缺陷导致安装依赖崩溃
+p4a.branch = develop
+p4a.commit = d97d80710c014bf2b65e0a979e3176562e924562
+
+# 横屏 + 全屏
+orientation = landscape
+fullscreen = 1
+
+# 安卓构建参数
+android.api = 34
+android.minapi = 21
+android.archs = arm64-v8a, armeabi-v7a
+android.accept_sdk_license = True
+android.allow_backup = True
+
+# 调试版 APK（云构建产物，安装时需允许未知来源）
+android.mode = debug
+
+[buildozer]
+
+log_level = 2
+warn_on_root = 0

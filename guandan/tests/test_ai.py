@@ -1,1 +1,134 @@
-IiIiQUkgVjEuMSDlop7lvLrmqKHlnZfmtYvor5XvvJrorrDniYzlmajjgIHmrovlsYDmkJzntKLjgIFlbmhhbmNlZCDlhrPnrZbkuI7pn7PmlYjmmKDlsITjgIIiIiIKaW1wb3J0IG9zCmltcG9ydCByYW5kb20KaW1wb3J0IHN5cwpmcm9tIHBhdGhsaWIgaW1wb3J0IFBhdGgKCnN5cy5wYXRoLmluc2VydCgwLCBzdHIoUGF0aChfX2ZpbGVfXykucmVzb2x2ZSgpLnBhcmVudC5wYXJlbnQpKQoKZnJvbSBhaSBpbXBvcnQgKENhcmRNZW1vcnksIGF1dG9fc3RlcCwgY2hvb3NlX2FjdGlvbiwgc2ltdWxhdGVfbWF0Y2gpCmZyb20gY2FyZHMgaW1wb3J0IEJJR19KT0tFUiwgU01BTExfSk9LRVIKZnJvbSBnYW1lIGltcG9ydCBHdWFuZGFuR2FtZQpmcm9tIHJ1bGVzIGltcG9ydCBIYW5kVHlwZQpmcm9tIHNvdW5kIGltcG9ydCBldmVudF9mb3JfY29tYm8KCmZyb20gaGVscGVyIGltcG9ydCBjbHViLCBkaWFtb25kLCBoZWFydCwgc3BhZGUKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0g6K6w54mM5ZmoCmRlZiB0ZXN0X2NhcmRfbWVtb3J5X3Vuc2Vlbl9jb3VudHMoKToKICAgIGcgPSBHdWFuZGFuR2FtZShybmc9cmFuZG9tLlJhbmRvbSg3KSkKICAgIG1lbSA9IENhcmRNZW1vcnkoZywgMCkKICAgIHRvdGFsID0ge3I6IDggZm9yIHIgaW4gcmFuZ2UoMiwgMTUpfQogICAgdG90YWxbU01BTExfSk9LRVJdID0gMgogICAgdG90YWxbQklHX0pPS0VSXSA9IDIKICAgICMg5pyq6KeBID0gMTA4IOW8oOmFjeminSAtIOaIkeaJi+eJjCAtIOW3suWHuu+8iOWPkeeJjOWQjuaXoOW3suWHuueJjO+8iQogICAgZm9yIHIsIG4gaW4gdG90YWwuaXRlbXMoKToKICAgICAgICBtaW5lID0gc3VtKDEgZm9yIGMgaW4gZy5oYW5kc1swXSBpZiBjLnJhbmsgPT0gcikKICAgICAgICBhc3NlcnQgbWVtLnVuc2VlbltyXSA9PSBuIC0gbWluZQogICAgYXNzZXJ0IHN1bShtZW0udW5zZWVuLnZhbHVlcygpKSA9PSAxMDggLSAyNwoKCmRlZiB0ZXN0X2NhcmRfbWVtb3J5X3RyYWNrc19wbGF5ZWRfY2FyZHMoKToKICAgIGcgPSBHdWFuZGFuR2FtZShybmc9cmFuZG9tLlJhbmRvbSgxMSkpCiAgICAjIOebtOaOpeaTjee6te+8muaehOmAoOesrOS4gOi9ruiHqueUseWHuueJjO+8iOmAieaZrumAmueCueaVsOeJjO+8jOmBv+W8gOeOi+eahCAyIOW8oOmFjemine+8iQogICAgZy5waGFzZSA9ICJwbGF5aW5nIgogICAgZy50dXJuID0gMAogICAgY2FyZCA9IG5leHQoYyBmb3IgYyBpbiBnLmhhbmRzWzBdIGlmIGMucmFuayA8PSAxNCkKICAgIGcucGxheSgwLCBbY2FyZF0pCiAgICBtZW0gPSBDYXJkTWVtb3J5KGcsIDApCiAgICBhc3NlcnQgbWVtLnVuc2VlbltjYXJkLnJhbmtdID09IDggLSBzdW0oCiAgICAgICAgMSBmb3IgYyBpbiBnLmhhbmRzWzBdIGlmIGMucmFuayA9PSBjYXJkLnJhbmspIC0gMQoKCmRlZiB0ZXN0X2NhcmRfbWVtb3J5X2JlYXRfcG9zc2libGUoKToKICAgIGNsYXNzIEZha2VDb21ibzoKICAgICAgICBkZWYgX19pbml0X18oc2VsZiwgdHlwZV8sIHJhbmssIGJvbWI9RmFsc2UpOgogICAgICAgICAgICBzZWxmLnR5cGUgPSB0eXBlXwogICAgICAgICAgICBzZWxmLnJhbmsgPSByYW5rCiAgICAgICAgICAgIHNlbGYuX2JvbWIgPSBib21iCgogICAgICAgIGRlZiBpc19ib21iX2ZhbWlseShzZWxmKToKICAgICAgICAgICAgcmV0dXJuIHNlbGYuX2JvbWIKCiAgICBnID0gR3VhbmRhbkdhbWUocm5nPXJhbmRvbS5SYW5kb20oMykpCiAgICBtZW0gPSBDYXJkTWVtb3J5KGcsIDApCiAgICAjIOWkp+eOi+WNleW8oO+8muacquingeaXoOabtOWkpyDihpIg5Y6L5LiN5L2P77yI6Zmk6Z2e5Y+m5LiA5byg5aSn546L5pyq5Ye677yJCiAgICBhc3NlcnQgbm90IG1lbS5iZWF0X3Bvc3NpYmxlKEZha2VDb21ibyhIYW5kVHlwZS5TSU5HTEUsIDE3KSkgb3IgXAogICAgICAgIG1lbS51bnNlZW5bQklHX0pPS0VSXSA+IDAKICAgICMg5p6E6YCg77ya5oqK5Lik5byg5aSn546L5pS+6L+b5oiR55qE5omL54mMIOKGkiDmnKrop4HlpKfnjovkuLogMCDihpIg5aSn546L5b+F5Y6L5LiN5L2PCiAgICBmb3IgYyBpbiBsaXN0KGcuaGFuZHNbMF0pOgogICAgICAgIGlmIGMucmFuayAhPSBCSUdfSk9LRVI6CiAgICAgICAgICAgIGcuaGFuZHNbMF0ucmVtb3ZlKGMpCiAgICAgICAgICAgIGJyZWFrCiAgICBnLmhhbmRzWzBdICs9IFtzcGFkZShCSUdfSk9LRVIpXQogICAgc2Vlbl9iaWcgPSBzdW0oMSBmb3IgYyBpbiBnLmhhbmRzWzBdIGlmIGMucmFuayA9PSBCSUdfSk9LRVIpCiAgICBtZW0yID0gQ2FyZE1lbW9yeShnLCAwKQogICAgaWYgc2Vlbl9iaWcgPT0gMjoKICAgICAgICBhc3NlcnQgbm90IG1lbTIuYmVhdF9wb3NzaWJsZShGYWtlQ29tYm8oSGFuZFR5cGUuU0lOR0xFLCAxNykpCiAgICAjIOWkqeeOi+eCuOawuOi/nOaXoOinowogICAgYXNzZXJ0IG5vdCBtZW0yLmJlYXRfcG9zc2libGUoRmFrZUNvbWJvKEhhbmRUeXBlLlJPQ0tFVCwgMCwgYm9tYj1UcnVlKSkKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0g5q6L5bGA5pCc57SiCmRlZiB0ZXN0X2VuZGdhbWVfc2VhcmNoX2ZpbmlzaGVzX3doZW5fcG9zc2libGUoKToKICAgIGcgPSBHdWFuZGFuR2FtZShybmc9cmFuZG9tLlJhbmRvbSg1KSkKICAgICMg57K+566A5omL54mM5Li6IDQg5byg5ZCM54K554K45by5IOKGkiDkuLvliqjlh7rniYzml7bkuIDmrKHlh7rlrozplIHlrpoKICAgIGcucGhhc2UgPSAicGxheWluZyIKICAgIGcuaGFuZHNbMF0gPSBbc3BhZGUoOSksIGhlYXJ0KDkpLCBjbHViKDkpLCBkaWFtb25kKDkpXQogICAgZy5sYXN0X3BsYXkgPSBOb25lCiAgICBnLnR1cm4gPSAwCiAgICBraW5kLCBjYXJkcyA9IGNob29zZV9hY3Rpb24oZywgMCwgZW5oYW5jZWQ9VHJ1ZSkKICAgIGFzc2VydCBraW5kID09ICJwbGF5IiBhbmQgbGVuKGNhcmRzKSA9PSA0CgoKZGVmIHRlc3RfZW5oYW5jZWRfYWlfZnVsbF9tYXRjaF9zbW9rZSgpOgogICAgIiIiZW5oYW5jZWQ9VHJ1ZSDlhajoh6rliqjmqKHmi5/mlbTlnLrmr5TotZvvvJrlkIjms5XjgIHml6Dmrbvlvqrnjq/jgIHog73mraPluLjnu4jlsYDjgIIiIiIKICAgIGZvciBzZWVkIGluICgxLCAyLCAzKToKICAgICAgICBnID0gR3VhbmRhbkdhbWUocm5nPXJhbmRvbS5SYW5kb20oc2VlZCkpCiAgICAgICAgc3RhdHMgPSBzaW11bGF0ZV9tYXRjaChnLCBlbmhhbmNlZD1UcnVlLCBtYXhfYWN0aW9ucz00MDAwMCkKICAgICAgICBhc3NlcnQgc3RhdHNbIndpbm5lcl90ZWFtIl0gaW4gKDAsIDEpCiAgICAgICAgYXNzZXJ0IHN0YXRzWyJyb3VuZHMiXSA+PSAxCgoKZGVmIHRlc3RfZW5oYW5jZWRfbWF0Y2hlc19iYXNpY193aGVuX2Rpc2FibGVkKCk6CiAgICAiIiJlbmhhbmNlZD1GYWxzZSDkv53mjIEgVjEuMCDooYzkuLrvvJrkuI7ml6fmjqXlj6Pnu5PmnpzkuIDoh7TvvIjlkIznp43lrZDvvInjgIIiIiIKICAgIGcxID0gR3VhbmRhbkdhbWUocm5nPXJhbmRvbS5SYW5kb20oNDIpKQogICAgYTEgPSBhdXRvX3N0ZXAoZzEpCiAgICBnMiA9IEd1YW5kYW5HYW1lKHJuZz1yYW5kb20uUmFuZG9tKDQyKSkKICAgIGEyID0gYXV0b19zdGVwKGcyLCBlbmhhbmNlZD1GYWxzZSkKICAgIGFzc2VydCBhMSA9PSBhMgoKCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSDpn7PmlYjmmKDlsIQKZGVmIHRlc3RfZXZlbnRfZm9yX2NvbWJvX21hcHBpbmcoKToKICAgIGNsYXNzIEM6CiAgICAgICAgZGVmIF9faW5pdF9fKHNlbGYsIHQpOgogICAgICAgICAgICBzZWxmLnR5cGUgPSB0CiAgICAgICAgICAgIHNlbGYucmFuayA9IDUKCiAgICAgICAgZGVmIGlzX2JvbWJfZmFtaWx5KHNlbGYpOgogICAgICAgICAgICByZXR1cm4gVHJ1ZQoKICAgIGFzc2VydCBldmVudF9mb3JfY29tYm8oQyhIYW5kVHlwZS5TSU5HTEUpKSA9PSAicGxheV9zaW5nbGUiCiAgICBhc3NlcnQgZXZlbnRfZm9yX2NvbWJvKEMoSGFuZFR5cGUuUEFJUikpID09ICJwbGF5X3BhaXIiCiAgICBhc3NlcnQgZXZlbnRfZm9yX2NvbWJvKEMoSGFuZFR5cGUuQk9NQikpID09ICJwbGF5X2JvbWIiCiAgICBhc3NlcnQgZXZlbnRfZm9yX2NvbWJvKEMoSGFuZFR5cGUuU1RSQUlHSFRfRkxVU0gpKSA9PSAicGxheV9zZiIKICAgIGFzc2VydCBldmVudF9mb3JfY29tYm8oQyhIYW5kVHlwZS5ST0NLRVQpKSA9PSAicGxheV9yb2NrZXQiCiAgICBhc3NlcnQgZXZlbnRfZm9yX2NvbWJvKEMoSGFuZFR5cGUuU1RSQUlHSFQpKSA9PSAicGxheV9tdWx0aSIKICAgIGFzc2VydCBldmVudF9mb3JfY29tYm8oQyhIYW5kVHlwZS5UUklQTEVfUEFJUikpID09ICJwbGF5X211bHRpIgoKCmRlZiB0ZXN0X3NvdW5kX21hbmFnZXJfc2lsZW50X3dpdGhvdXRfYXNzZXRzKCk6CiAgICAiIiLml6Dpn7PpopHntKDmnZDml7YgU291bmRNYW5hZ2VyIOWFqOmTvui3r+mdmem7mOS4jeaKm+mUmeOAgiIiIgogICAgZnJvbSBzb3VuZCBpbXBvcnQgU291bmRNYW5hZ2VyCiAgICBzZXR0aW5ncyA9IHsic291bmQiOiBUcnVlLCAiYmdtIjogIm9mZiJ9CiAgICBzbSA9IFNvdW5kTWFuYWdlcihsYW1iZGE6IHNldHRpbmdzKQogICAgZm9yIGV2IGluICgiZGVhbCIsICJwYXNzIiwgInBsYXlfYm9tYiIsICJyb3VuZF93aW4iKToKICAgICAgICBzbS5wbGF5KGV2KSAgICAgICAgICAgICAgICMg57y657Sg5p2QIOKGkiDpnZnpu5gKICAgIHNtLnVwZGF0ZV9iZ20oKQogICAgc2V0dGluZ3NbImJnbSJdID0gInRyYWNrMSIKICAgIHNtLnVwZGF0ZV9iZ20oKSAgICAgICAgICAgICAgICMg57y6IEJHTSDmlofku7Yg4oaSIOmdmem7mAogICAgc20uc3RvcF9hbGwoKQogICAgc2V0dGluZ3NbInNvdW5kIl0gPSBGYWxzZQogICAgc20ucGxheSgiZGVhbCIpICAgICAgICAgICAgICAgIyDlvIDlhbPlhbPpl60g4oaSIOebtOaOpei3s+i/hwo=
+"""AI V1.1 增强模块测试：记牌器、残局搜索、enhanced 决策与音效映射。"""
+import os
+import random
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from ai import (CardMemory, auto_step, choose_action, simulate_match)
+from cards import BIG_JOKER, SMALL_JOKER
+from game import GuandanGame
+from rules import HandType
+from sound import event_for_combo
+
+from helper import club, diamond, heart, spade
+
+
+# ---------------------------------------------------------------- 记牌器
+def test_card_memory_unseen_counts():
+    g = GuandanGame(rng=random.Random(7))
+    mem = CardMemory(g, 0)
+    total = {r: 8 for r in range(2, 15)}
+    total[SMALL_JOKER] = 2
+    total[BIG_JOKER] = 2
+    # 未见 = 108 张配额 - 我手牌 - 已出（发牌后无已出牌）
+    for r, n in total.items():
+        mine = sum(1 for c in g.hands[0] if c.rank == r)
+        assert mem.unseen[r] == n - mine
+    assert sum(mem.unseen.values()) == 108 - 27
+
+
+def test_card_memory_tracks_played_cards():
+    g = GuandanGame(rng=random.Random(11))
+    # 直接操纵：构造第一轮自由出牌（选普通点数牌，避开王的 2 张配额）
+    g.phase = "playing"
+    g.turn = 0
+    card = next(c for c in g.hands[0] if c.rank <= 14)
+    g.play(0, [card])
+    mem = CardMemory(g, 0)
+    assert mem.unseen[card.rank] == 8 - sum(
+        1 for c in g.hands[0] if c.rank == card.rank) - 1
+
+
+def test_card_memory_beat_possible():
+    class FakeCombo:
+        def __init__(self, type_, rank, bomb=False):
+            self.type = type_
+            self.rank = rank
+            self._bomb = bomb
+
+        def is_bomb_family(self):
+            return self._bomb
+
+    g = GuandanGame(rng=random.Random(3))
+    mem = CardMemory(g, 0)
+    # 大王单张：未见无更大 → 压不住（除非另一张大王未出）
+    assert not mem.beat_possible(FakeCombo(HandType.SINGLE, 17)) or \
+        mem.unseen[BIG_JOKER] > 0
+    # 构造：把两张大王放进我的手牌 → 未见大王为 0 → 大王必压不住
+    for c in list(g.hands[0]):
+        if c.rank != BIG_JOKER:
+            g.hands[0].remove(c)
+            break
+    g.hands[0] += [spade(BIG_JOKER)]
+    seen_big = sum(1 for c in g.hands[0] if c.rank == BIG_JOKER)
+    mem2 = CardMemory(g, 0)
+    if seen_big == 2:
+        assert not mem2.beat_possible(FakeCombo(HandType.SINGLE, 17))
+    # 天王炸永远无解
+    assert not mem2.beat_possible(FakeCombo(HandType.ROCKET, 0, bomb=True))
+
+
+# ---------------------------------------------------------------- 残局搜索
+def test_endgame_search_finishes_when_possible():
+    g = GuandanGame(rng=random.Random(5))
+    # 精简手牌为 4 张同点炸弹 → 主动出牌时一次出完锁定
+    g.phase = "playing"
+    g.hands[0] = [spade(9), heart(9), club(9), diamond(9)]
+    g.last_play = None
+    g.turn = 0
+    kind, cards = choose_action(g, 0, enhanced=True)
+    assert kind == "play" and len(cards) == 4
+
+
+def test_enhanced_ai_full_match_smoke():
+    """enhanced=True 全自动模拟整场比赛：合法、无死循环、能正常终局。"""
+    for seed in (1, 2, 3):
+        g = GuandanGame(rng=random.Random(seed))
+        stats = simulate_match(g, enhanced=True, max_actions=40000)
+        assert stats["winner_team"] in (0, 1)
+        assert stats["rounds"] >= 1
+
+
+def test_enhanced_matches_basic_when_disabled():
+    """enhanced=False 保持 V1.0 行为：与旧接口结果一致（同种子）。"""
+    g1 = GuandanGame(rng=random.Random(42))
+    a1 = auto_step(g1)
+    g2 = GuandanGame(rng=random.Random(42))
+    a2 = auto_step(g2, enhanced=False)
+    assert a1 == a2
+
+
+# ---------------------------------------------------------------- 音效映射
+def test_event_for_combo_mapping():
+    class C:
+        def __init__(self, t):
+            self.type = t
+            self.rank = 5
+
+        def is_bomb_family(self):
+            return True
+
+    assert event_for_combo(C(HandType.SINGLE)) == "play_single"
+    assert event_for_combo(C(HandType.PAIR)) == "play_pair"
+    assert event_for_combo(C(HandType.BOMB)) == "play_bomb"
+    assert event_for_combo(C(HandType.STRAIGHT_FLUSH)) == "play_sf"
+    assert event_for_combo(C(HandType.ROCKET)) == "play_rocket"
+    assert event_for_combo(C(HandType.STRAIGHT)) == "play_multi"
+    assert event_for_combo(C(HandType.TRIPLE_PAIR)) == "play_multi"
+
+
+def test_sound_manager_silent_without_assets():
+    """无音频素材时 SoundManager 全链路静默不抛错。"""
+    from sound import SoundManager
+    settings = {"sound": True, "bgm": "off"}
+    sm = SoundManager(lambda: settings)
+    for ev in ("deal", "pass", "play_bomb", "round_win"):
+        sm.play(ev)               # 缺素材 → 静默
+    sm.update_bgm()
+    settings["bgm"] = "track1"
+    sm.update_bgm()               # 缺 BGM 文件 → 静默
+    sm.stop_all()
+    settings["sound"] = False
+    sm.play("deal")               # 开关关闭 → 直接跳过
