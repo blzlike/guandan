@@ -53,12 +53,15 @@ jobs:
           sudo chown -R 1000:1000 "$CACHE_DIR"
 
       - name: 构建 APK（arm64-v8a）
+        # 镜像 ENTRYPOINT 即 buildozer，不能传 bash -c（会报 Unknown command/target bash）；
+        # 用 -w 进入 guandan 子目录，参数直接给 buildozer
         run: |
           docker run --rm \
+            -w /home/user/hostcwd/guandan \
             -v "$GITHUB_WORKSPACE":/home/user/hostcwd \
             -v "$CACHE_DIR/gradle":/home/user/.gradle \
             ghcr.io/kivy/buildozer:latest \
-            bash -c "cd guandan && buildozer android debug"
+            android debug
 
       - name: 上传 APK
         uses: actions/upload-artifact@v4
