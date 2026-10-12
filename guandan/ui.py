@@ -304,8 +304,8 @@ class SuitIcon(Widget):
         w, h = self.size
         self._label.pos = (x, y)
         self._label.size = (w, h)
-        # 花色字形宽约占字号 55%（est）：取字号=格宽/est，使字形宽=格宽
-        # （即同花顺框整体宽度的一半）；
+        # 花色字形高约占字号 75%：格高=框高一半，取字号=格高 0.8 倍，
+        # 使字形高=框整体高度的 30%（0.75×0.8=0.6=0.3×2）；
         # 估算宽度时剔除 [font=...] 标记，只统计可见字形
         plain, skip = "", False
         for ch in self._label.text:
@@ -316,7 +316,7 @@ class SuitIcon(Widget):
             elif not skip:
                 plain += ch
         est = sum(1.0 if ord(ch) > 0x2E80 else 0.55 for ch in plain) or 1.0
-        self._label.font_size = max(12, int(w / est))
+        self._label.font_size = max(12, int(min(h * 0.8, w / est)))
 
     def on_touch_down(self, touch):
         if self.on_press and self.collide_point(*touch.pos):
