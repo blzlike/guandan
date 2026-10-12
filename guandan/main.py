@@ -23,8 +23,13 @@ try:
     Config.set("kivy", "window_state", "visible")
     # 双击判定放宽到 350ms（默认 250ms），触屏上双击快速选组更易触发
     Config.set("input", "double_tap_time", "350")
-    # 预留 Android 横屏（APK 阶段启用）
-    Config.set("graphics", "orientation", "landscape")
+    # 安卓启动黑屏修复①：关闭 MSAA。部分机型 multisamples=2 的 EGL 配置
+    # 首帧不合成（黑屏直到触摸）；卡牌游戏无需抗锯齿
+    Config.set("graphics", "multisamples", "0")
+    if sys.platform not in ("android", "ios"):
+        # 桌面用横屏；安卓朝向由 buildozer.spec orientation 控制，
+        # 避免窗口创建后再改朝向触发 surface 重建丢帧（黑屏修复②）
+        Config.set("graphics", "orientation", "landscape")
 except Exception:
     pass
 

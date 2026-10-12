@@ -304,8 +304,8 @@ class SuitIcon(Widget):
         w, h = self.size
         self._label.pos = (x, y)
         self._label.size = (w, h)
-        # 花色字形高约占字号 75%：格高=框高一半，取字号=格高 0.8 倍，
-        # 使字形高=框整体高度的 30%（0.75×0.8=0.6=0.3×2）；
+        # 花色字形高约占字号 75%：格高=框高一半，取字号=格高 0.9333 倍，
+        # 使字形高=框整体高度的 35%（0.75×0.9333=0.7=0.35×2）；
         # 估算宽度时剔除 [font=...] 标记，只统计可见字形
         plain, skip = "", False
         for ch in self._label.text:
@@ -316,7 +316,7 @@ class SuitIcon(Widget):
             elif not skip:
                 plain += ch
         est = sum(1.0 if ord(ch) > 0x2E80 else 0.55 for ch in plain) or 1.0
-        self._label.font_size = max(12, int(min(h * 0.8, w / est)))
+        self._label.font_size = max(12, int(min(h * 0.9333, w / est)))
 
     def on_touch_down(self, touch):
         if self.on_press and self.collide_point(*touch.pos):
@@ -539,18 +539,19 @@ class TableScreen(Screen):
     # 中央出牌区：从对家到手牌区、上家到下家之间的矩形（窗口比例）；
     # 下沿上移半张手牌高度（0.445→0.519），上/下家头像与其新水平中线 0.697 对齐
     PLAY_RECT = (0.115, 0.519, 0.885, 0.875)
-    # 各玩家头像/名字/剩牌数（对家：头像上沿与右上按钮上端(0.988)齐平，名字/剩牌数
-    # 在头像左右两侧贴图标、间隔半个字，与头像横向轴线居中；其余：名字在头像上方、
-    # 剩牌数在头像下方，均与头像水平居中；窗口比例）
+    # 各玩家头像/名字/剩牌数（头像尺寸=原 1.5 倍、中心不变；对家头像中心与右上
+    # 按钮水平中线(0.942)对齐、上沿略越出屏幕（PNG 自带 10% 透明边距，内容不裁切），
+    # 名字/剩牌数在头像左右两侧贴图标，与头像横向轴线居中；其余：名字在头像上方、
+    # 剩牌数在头像下方（留半字间隔），均与头像水平居中；窗口比例）
     P_LAYOUT = {
-        2: dict(avatar=(0.468, 0.896, 0.532, 0.988), name=(0.320, 0.920, 0.460, 0.965),
-                count=(0.540, 0.920, 0.680, 0.965)),
-        3: dict(avatar=(0.020, 0.651, 0.080, 0.743), name=(0.000, 0.751, 0.100, 0.795),
-                count=(0.000, 0.598, 0.100, 0.643)),
-        1: dict(avatar=(0.920, 0.651, 0.980, 0.743), name=(0.900, 0.751, 1.000, 0.795),
-                count=(0.900, 0.598, 1.000, 0.643)),
-        0: dict(avatar=(0.020, 0.225, 0.080, 0.317), name=(0.000, 0.325, 0.100, 0.369),
-                count=(0.000, 0.173, 0.100, 0.219)),
+        2: dict(avatar=(0.452, 0.873, 0.548, 1.011), name=(0.320, 0.9085, 0.460, 0.9765),
+                count=(0.540, 0.9085, 0.680, 0.9765)),
+        3: dict(avatar=(0.005, 0.628, 0.095, 0.766), name=(-0.010, 0.774, 0.110, 0.842),
+                count=(-0.010, 0.552, 0.110, 0.620)),
+        1: dict(avatar=(0.905, 0.628, 0.995, 0.766), name=(0.890, 0.774, 1.010, 0.842),
+                count=(0.885, 0.552, 1.015, 0.620)),
+        0: dict(avatar=(0.005, 0.202, 0.095, 0.340), name=(-0.010, 0.348, 0.110, 0.416),
+                count=(-0.010, 0.126, 0.110, 0.194)),
     }
 
     def __init__(self, app, **kw):
@@ -723,7 +724,7 @@ class TableScreen(Screen):
         g = self.game
         badges = self._turn_badges()
         thr = self.app.settings["report_threshold"]
-        fs = 32
+        fs = 48
         for pid, lay in self.P_LAYOUT.items():
             ax, ay, aw, ah = self._rect(*lay["avatar"])
             self.add_widget(Panel(pos=(ax, ay), size=(aw, ah),
@@ -1010,6 +1011,7 @@ class TableScreen(Screen):
         gap = hs // 2                           # 间距 = 原值（半个旧按钮高度）
         YEL = (0.99, 0.94, 0.70, 1)             # 浅黄底
         YEL_TXT = (0.30, 0.20, 0.04, 1)         # 浅黄底上的深色文字
+        GRN_SF = (0.80, 0.93, 0.80, 1)          # 同花顺框填充（与开新局按钮同色）
         # 原出牌按钮：_rect(0.875, 0.280, 0.980, 0.380)
         x = int(0.980 * W) - w                  # 右缘齐平
         y2 = int(0.380 * H) - 2 * hs - gap      # 恢复手牌下沿 = 原位置不变
@@ -1020,10 +1022,10 @@ class TableScreen(Screen):
                                    text_color=YEL_TXT, pos=(x, y), size=(w, nh)))
         # 同花顺框：距恢复手牌按钮下沿 2 个旧按钮高度；正方形（高=宽），
         # 两列×每列两花色（列1=黑桃/红桃，列2=梅花/方块），
-        # 黑边框 + 浅黄填充（图标后添加，绘制在填充之上）；
-        # 框内仅显示花色符号（不显示候选数字），字形宽=框宽度的一半
+        # 黑边框 + 浅绿填充（与开新局按钮同色）（图标后添加，绘制在填充之上）；
+        # 框内仅显示花色符号（不显示候选数字），字形高=框高的 35%
         y3 = y2 - 2 * hs - w
-        self._add_panel((x, y3, w, w), color=YEL,
+        self._add_panel((x, y3, w, w), color=GRN_SF,
                         border=(0.05, 0.05, 0.05, 0.9), radius=6)
         slot_w = w / 2.0
         slot_h = w / 2.0
@@ -1510,10 +1512,23 @@ class GuandanApp(App):
     def on_start(self):
         self.sounds.ensure_loaded()
         self.sounds.update_bgm()
-        # 安卓部分机型启动后首帧不合成（黑屏、需触摸才显示）：
-        # 启动后延迟强制重建牌桌并请求重绘几次兜底
+        # 安卓部分机型启动后黑屏、需触摸命中控件才显示。根因：Kivy 仅在
+        # canvas 变脏时才绘制+交换一帧（kivy/base.py EventLoop.idle），
+        # 而启动初期（含 presplash 移除触发 surface 重建阶段）绘制的帧都在
+        # Android Surface 就绪之前、全部被丢弃；此后 canvas 不再变脏、不再
+        # 产生新帧，直到触摸命中控件（空点不脏 canvas，故仍黑屏）。
+        # 修复：启动后 10 秒内每 0.25s 强制标脏产生新帧，保证至少一帧落在
+        # Surface 就绪之后；前 3 次同时重建牌桌纠正迟到的窗口尺寸布局。
         for t in (0.2, 0.6, 1.2):
             Clock.schedule_once(lambda dt: self._force_redraw(), t)
+        Clock.schedule_interval(self._boot_dirty, 0.25)
+        Clock.schedule_once(self._stop_boot_dirty, 10)
+
+    def _boot_dirty(self, *a):
+        Window.canvas.ask_update()
+
+    def _stop_boot_dirty(self, *a):
+        Clock.unschedule(self._boot_dirty)
 
     def _force_redraw(self):
         Window.canvas.ask_update()

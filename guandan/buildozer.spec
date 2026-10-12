@@ -4,8 +4,10 @@
 title = 顺溜掼蛋
 # 应用图标：源码根目录 logo.png（png 已在 include_exts 中随包打包）
 icon.filename = logo.png
-# 安卓加载画面（presplash）：与图标同款 logo
-presplash.filename = logo.png
+# 安卓加载画面（presplash）：presplash.png 为 2400x1080 横版图，
+# logo 居中且仅占一半高度（p4a 会将 presplash 拉伸铺满屏幕，
+# 故直接在图内留出背景色边距实现半高显示）
+presplash.filename = presplash.png
 presplash.color = (0.13, 0.33, 0.16, 1)
 package.name = guandan
 version = 1.0
