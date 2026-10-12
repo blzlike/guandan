@@ -130,13 +130,13 @@ LOGO_PATH = os.path.join(_ASSET_DIR, "logo.png")
 
 SETTINGS_PATH = os.path.join(_HERE, "settings.json")
 DEFAULT_SETTINGS = {
-    "report_threshold": 10,
-    "low_card_alert": True,
+    "report_threshold": 10,   # 10 张报数（文字显示）
+    "low_card_alert": True,   # ≤6 张主动报（声音提醒）默认开启
     "ai_delay": 0.35,
     "level_start": 2,
     "sound": True,          # 音效开关（播放接口，暂无音频文件）
-    "bgm": "off",           # 背景乐：off | track1 | track2（选择接口）
-    "ai_strength": "low",   # AI 牌力：low | high
+    "bgm": "track1",        # 背景乐默认播放曲目一：off | track1 | track2
+    "ai_strength": "high",  # AI 牌力默认高：low | high
 }
 
 
@@ -304,8 +304,8 @@ class SuitIcon(Widget):
         w, h = self.size
         self._label.pos = (x, y)
         self._label.size = (w, h)
-        # 花色字形高约占字号 75%：取字号=栏高 1.33 倍，使字形高≈栏高
-        # （即同花顺框整体高度的一半），贴近格上下边沿；
+        # 花色字形宽约占字号 55%（est）：取字号=格宽/est，使字形宽=格宽
+        # （即同花顺框整体宽度的一半）；
         # 估算宽度时剔除 [font=...] 标记，只统计可见字形
         plain, skip = "", False
         for ch in self._label.text:
@@ -316,7 +316,7 @@ class SuitIcon(Widget):
             elif not skip:
                 plain += ch
         est = sum(1.0 if ord(ch) > 0x2E80 else 0.55 for ch in plain) or 1.0
-        self._label.font_size = max(12, int(min(h * 1.33, w * 0.94 / est)))
+        self._label.font_size = max(12, int(w / est))
 
     def on_touch_down(self, touch):
         if self.on_press and self.collide_point(*touch.pos):
@@ -613,6 +613,13 @@ class TableScreen(Screen):
         ry = self._rect(*self.PLAY_RECT)[1]
         return max(60.0, (ry - hy - 5) / 2.5)
 
+    def _ref_bh(self) -> int:
+        """出牌按钮参考高度 = 我方分区无内容时行动徽章直径
+        （与 _build_actions 中 bh = 徽章 d 的公式一致）。"""
+        W, H = Window.width, Window.height
+        zh = (self.PLAY_RECT[3] - self.PLAY_RECT[1]) * H * 0.44
+        return int(min(0.050 * W, zh * 0.92))
+
     # ---- 主刷新
     def refresh(self):
         g = self.game
@@ -821,7 +828,7 @@ class TableScreen(Screen):
             text = "进贡" if self._mode == "tribute" else "还贡"
             zx, zy, zw, zh = zones[0]
             mx, my = zx + zw / 2, zy + zh / 2
-            bw, bh = int(0.110 * W), int(0.062 * H)
+            bw, bh = int(0.110 * W), self._ref_bh()   # 高度=出牌按钮高度
             self.add_widget(FlatButton(text, (0.80, 0.55, 0.15, 1), self._on_play,
                                        pos=(int(mx - bw / 2), int(my - bh / 2)),
                                        size=(bw, bh)))
@@ -917,8 +924,8 @@ class TableScreen(Screen):
     def _build_hand(self):
         g = self.game
         self._hand_widgets = {}
-        # 右缘至「整理手牌」按钮左侧（按钮左缘 = 0.980W - 0.070W = 0.910W）
-        x, y, w, h = self._rect(0.080, 0.012, 0.910, 0.517)
+        # 右缘距同花顺框左缘（0.910W）保留 1/5 框宽（0.070W/5=0.014W）→ 0.896W
+        x, y, w, h = self._rect(0.080, 0.012, 0.896, 0.517)
         bombs, combos = self.mgr.arranged_layout()
         nb, ncc = len(bombs), len(combos)
         # 牌面尺寸锁定：按「6 张一列恰好到出牌区下沿」计算一次
@@ -992,27 +999,29 @@ class TableScreen(Screen):
             self._add_hand_card(c, cx, base_y + k * step, cw, ch)
 
     # ---- 右侧竖列（原出牌按钮位置）：整理手牌 / 恢复手牌 / 同花顺框
-    # （按钮宽为原出牌按钮 2/3、右缘与其右缘齐平；两按钮间距=半个按钮高度；
-    #   同花顺框距恢复手牌按钮下沿 2 个按钮高度，高=宽的正方形框）
+    # （按钮宽为原出牌按钮 2/3、右缘与其右缘齐平；按钮高度=出牌按钮高度；
+    #   恢复手牌下沿位置不变、向上增高，两按钮间距保持原值（半旧高度）；
+    #   同花顺框距恢复手牌按钮下沿 2 个旧按钮高度，高=宽的正方形框）
     def _build_sf_strip(self):
         W, H = Window.width, Window.height
-        hs = int(0.045 * H)                     # 控件统一高度
+        hs = int(0.045 * H)                     # 旧控件高度（间距/同花顺框定位基准）
+        nh = self._ref_bh()                     # 按钮高度 = 出牌按钮高度
         w = int(0.070 * W)                      # 按钮宽 = 原出牌按钮 0.105W 的 2/3
-        gap = hs // 2                           # 间距 = 半个按钮高度
-        # 原出牌按钮：_rect(0.875, 0.280, 0.980, 0.380)
-        x = int(0.980 * W) - w                  # 右缘齐平
-        y = int(0.380 * H) - hs                 # 整理手牌上端 = 原出牌按钮上端
+        gap = hs // 2                           # 间距 = 原值（半个旧按钮高度）
         YEL = (0.99, 0.94, 0.70, 1)             # 浅黄底
         YEL_TXT = (0.30, 0.20, 0.04, 1)         # 浅黄底上的深色文字
-        self.add_widget(FlatButton("整理手牌", YEL, self._on_arrange,
-                                   text_color=YEL_TXT, pos=(x, y), size=(w, hs)))
-        y2 = y - gap - hs
+        # 原出牌按钮：_rect(0.875, 0.280, 0.980, 0.380)
+        x = int(0.980 * W) - w                  # 右缘齐平
+        y2 = int(0.380 * H) - 2 * hs - gap      # 恢复手牌下沿 = 原位置不变
         self.add_widget(FlatButton("恢复手牌", YEL, self._on_restore,
-                                   text_color=YEL_TXT, pos=(x, y2), size=(w, hs)))
-        # 同花顺框：距恢复手牌按钮下沿 2 个按钮高度；正方形（高=宽），
+                                   text_color=YEL_TXT, pos=(x, y2), size=(w, nh)))
+        y = y2 + gap + nh                       # 整理手牌下沿 = 恢复上沿 + 原间距
+        self.add_widget(FlatButton("整理手牌", YEL, self._on_arrange,
+                                   text_color=YEL_TXT, pos=(x, y), size=(w, nh)))
+        # 同花顺框：距恢复手牌按钮下沿 2 个旧按钮高度；正方形（高=宽），
         # 两列×每列两花色（列1=黑桃/红桃，列2=梅花/方块），
         # 黑边框 + 浅黄填充（图标后添加，绘制在填充之上）；
-        # 框内仅显示花色符号（不显示候选数字），字形高=框整体高度的一半
+        # 框内仅显示花色符号（不显示候选数字），字形宽=框宽度的一半
         y3 = y2 - 2 * hs - w
         self._add_panel((x, y3, w, w), color=YEL,
                         border=(0.05, 0.05, 0.05, 0.9), radius=6)
@@ -1501,6 +1510,15 @@ class GuandanApp(App):
     def on_start(self):
         self.sounds.ensure_loaded()
         self.sounds.update_bgm()
+        # 安卓部分机型启动后首帧不合成（黑屏、需触摸才显示）：
+        # 启动后延迟强制重建牌桌并请求重绘几次兜底
+        for t in (0.2, 0.6, 1.2):
+            Clock.schedule_once(lambda dt: self._force_redraw(), t)
+
+    def _force_redraw(self):
+        Window.canvas.ask_update()
+        if self.sm.current == "table":
+            self.table.refresh()
 
     def _on_resize(self, *a):
         if self.sm.current == "table":

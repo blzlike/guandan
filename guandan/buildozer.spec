@@ -4,6 +4,9 @@
 title = 顺溜掼蛋
 # 应用图标：源码根目录 logo.png（png 已在 include_exts 中随包打包）
 icon.filename = logo.png
+# 安卓加载画面（presplash）：与图标同款 logo
+presplash.filename = logo.png
+presplash.color = (0.13, 0.33, 0.16, 1)
 package.name = guandan
 version = 1.0
 package.domain = org.guandan
@@ -15,7 +18,7 @@ source.dir = .
 source.mainclass = main
 source.include_exts = py,png,jpg,jpeg,ttf,otf,json,ogg,wav
 source.exclude_dirs = tests, assets, 图片资源, bin, .buildozer, .gradle
-source.exclude_patterns = .pytest_cache/*, __pycache__/*, */__pycache__/*, .idea/*
+source.exclude_patterns = .pytest_cache/*, __pycache__/*, */__pycache__/*, .idea/*, settings.json
 
 # 依赖：Kivy 2.3.1（与桌面开发版本一致）
 requirements = python3,kivy==2.3.1
