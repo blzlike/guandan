@@ -69,10 +69,14 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 from kivy.utils import platform as _platform
 
-from ai import AIProfile, choose_action
+from ai import AIProfile, explain_choice
+from registry import choose as strategy_choose, resolve_seat
 from arrange import HandManager
 from cards import BIG_JOKER, Card, Suit, RANK_LABELS
 from game import GameError, GuandanGame, IllegalPlayError, NotPlayerTurnError
+from replay import Recorder
+import observer
+import scorer
 from rules import can_play
 from sound import SoundManager, event_for_combo
 
@@ -106,6 +110,10 @@ def _sym(sym: str) -> str:
     """花色符号 markup：用 suitfont 字体渲染，缺字体时退回原字符。"""
     return f"[font=suitfont]{sym}[/font]" if os.path.exists(_SYM_FONT) else sym
 
+# 界面文字统一字号：出牌区/结算/进贡画面及头像旁文字均以右上「开新局」按钮
+# 的文字大小为基准，默认 1 倍；调整此系数可整体放大/缩小
+UI_TEXT_SCALE = 1.0
+
 # 角色名（0=人类玩家下方，1=下家右侧，2=对家上方，3=上家左侧）
 PLAYER_NAMES = {0: "我", 1: "下家", 2: "对家", 3: "上家"}
 
@@ -132,11 +140,13 @@ SETTINGS_PATH = os.path.join(_HERE, "settings.json")
 DEFAULT_SETTINGS = {
     "report_threshold": 10,   # 10 张报数（文字显示）
     "low_card_alert": True,   # ≤6 张主动报（声音提醒）默认开启
-    "ai_delay": 0.35,
+    "ai_delay": 0.15,      # AI 出牌间隔（秒），较旧版 0.35 调短
     "level_start": 2,
     "sound": True,          # 音效开关（播放接口，暂无音频文件）
     "bgm": "track1",        # 背景乐默认播放曲目一：off | track1 | track2
     "ai_strength": "high",  # AI 牌力默认高：low | high
+    "seats": {},            # 座位策略覆盖 {str(pid): sid|None}；None/缺失=跟随全局
+    "teaching": True,       # 教学面板：数据显示 + 出牌建议（左缘「教学」按钮展开）
 }
 
 
@@ -153,6 +163,8 @@ def load_settings() -> dict:
         pass
     if not isinstance(data["report_threshold"], int) or data["report_threshold"] < 1:
         data["report_threshold"] = 10
+    if data.get("ai_delay") == 0.35:      # 旧默认值迁移为调短后的新默认
+        data["ai_delay"] = 0.15
     return data
 
 
@@ -224,6 +236,12 @@ class FlatButton(Widget):
         self._top_c.rgba = self.base_color if val else (0.45, 0.45, 0.45, 1)
         self._bd_c.rgba = self._shade(self.base_color if val else (0.45, 0.45, 0.45, 1), 0.60)
         self._label.color = self.text_color + (1 if val else 0.45,)
+
+    def set_text(self, text: str):
+        """运行时改按钮文字（重算字号防溢出）。"""
+        self.text = text
+        self._label.text = text
+        self._place()
 
     def _sink(self, down: bool):
         h = self.height
@@ -566,6 +584,9 @@ class TableScreen(Screen):
         self._mode = "play"  # play | tribute | return
         self._prev_phase = self.game.phase
         self._tribute_hold_until = 0.0   # 贡牌展示保留期截止时刻
+        self._recorder = None            # 牌局记录（结算打分数据源，见 scorer）
+        self._replay_saved_path = None   # 本场复盘文件已保存路径（重复保存覆盖）
+        self._scores = None              # 打分缓存 {pid: 0-100}（跃迁帧算一次）
         self._prev_trick: Dict[int, dict] = {}    # 上次刷新时的各家出牌展示
         self._trick_snapshot: Dict[int, dict] = {}  # 一轮结束时的展示快照
         self._trick_hold_until = 0.0     # 一轮结束后展示保留期截止时刻
@@ -574,6 +595,10 @@ class TableScreen(Screen):
         self._drag_touched: Set[int] = set()
         self._btn_play: Optional[FlatButton] = None
         self._btn_pass: Optional[FlatButton] = None
+        self._teach_open = False         # 教学面板展开状态（折叠面板 slot）
+        self._tracker = None             # 教学数据跟踪（已出牌，比赛起点挂载）
+        self._attach_recorder()          # 启动首局也录制（否则首局无复盘/打分）
+        self._attach_tracker()
         self.refresh()
         Clock.schedule_interval(self._pump, 0.12)
 
@@ -645,6 +670,9 @@ class TableScreen(Screen):
             else:
                 wt = g.round_result["winner_team"] if g.round_result else 0
                 self.app.sounds.play("round_win" if wt == 0 else "round_lose")
+            # 结算打分（专家对比法重演）：下一帧算完缓存，结算页读缓存展示
+            if self._recorder is not None and self._scores is None:
+                Clock.schedule_once(lambda dt: self._compute_scores(), 0)
         self._prev_phase = g.phase
         self.clear_widgets()
         self._drag_target = None
@@ -666,12 +694,21 @@ class TableScreen(Screen):
         self._build_sf_strip()
         self._build_actions()
         self._build_topbar()
+        self._build_teaching()
         self._update_alerts()
+
+    # ---- 统一文字字号：以右上「开新局」按钮的文字为基准（FlatButton 公式）
+    def _text_fs(self) -> int:
+        H = Window.height
+        bh = 0.063 * H                        # 开新局按钮高（_build_topbar）
+        bw = 2.7 * bh                         # 开新局按钮宽
+        fs = max(9, int(min(bh * 0.60, bw * 0.94 / 3)))   # 按钮文字（3 字）
+        return max(9, int(fs * UI_TEXT_SCALE))
 
     # ---- 左上信息区：「我方打X」「对方打X」两个带底色文本框，攻方高亮
     def _build_info(self):
         g = self.game
-        fs = max(16, int(0.024 * Window.width))   # 字号为原信息文字 2 倍
+        fs = self._text_fs()
         for i, (txt, team) in enumerate((("我方打" + RANK_LABELS[g.levels[0]], 0),
                                          ("对方打" + RANK_LABELS[g.levels[1]], 1))):
             fx1 = 0.005 + i * 0.150
@@ -687,23 +724,130 @@ class TableScreen(Screen):
     # ---- 右上角：开新局 / 退出 / 设置（等宽，水平中线与对家头像中线对齐）
     def _build_topbar(self):
         H = Window.height
+        # 四键均分：区间 = 原 3 键布局「开新局」左边线 → 界面右边线，
+        # 等宽 + 等间距重新分布（修复加第 4 键后右沿超出屏幕）
         h = int(0.063 * H)
-        w = int(2.7 * h)                    # 容纳「开新局」三字（字号=高度80%）
         gap = int(0.012 * H)
-        right = int(Window.width * 0.995 - w * 0.5)   # 整组左移半个按钮宽
+        w_old = int(2.7 * h)              # 原「开新局」三字按钮宽（仅用于定位左沿）
+        left = int(Window.width * 0.995 - w_old * 0.5) - 2 * w_old - gap
+        right_edge = int(Window.width)
+        btns = [
+            ("开新局", self._on_new_match),
+            ("退出", lambda: App.get_running_app().stop()),
+            ("设置", lambda: self.app.goto("settings")),
+            ("复盘", lambda: self.app.goto("replay")),
+        ]
+        n = len(btns)
+        bw = (right_edge - left - (n - 1) * gap) // n
+        left += (right_edge - left - (n - 1) * gap) % n   # 整除余数并入起点，右沿精确贴边
         av = self.P_LAYOUT[2]["avatar"]
         y = int((av[1] + av[3]) / 2 * H - h / 2)      # 与对家头像水平中线对齐
         GRN = (0.80, 0.93, 0.80, 1)          # 浅绿底
         GRN_TXT = (0.08, 0.26, 0.10, 1)      # 浅绿底上的深色文字
-        btns = [
-            ("开新局", GRN, self._on_new_match),
-            ("退出", GRN, lambda: App.get_running_app().stop()),
-            ("设置", GRN, lambda: self.app.goto("settings")),
-        ]
-        for i, (text, color, cb) in enumerate(btns):
-            x = int(right - (3 - i) * w - (2 - i) * gap)
-            self.add_widget(FlatButton(text, color, cb, text_color=GRN_TXT,
-                                       pos=(x, y), size=(w, h)))
+        for i, (text, cb) in enumerate(btns):
+            x = left + i * (bw + gap)
+            self.add_widget(FlatButton(text, GRN, cb, text_color=GRN_TXT,
+                                       pos=(x, y), size=(bw, h)))
+
+    # ---- 教学面板（折叠 slot，阶段三挂载点）：左缘「教学」按钮 + 展开时的
+    #      左下三模块网格面板。位置（用户 2026-10-13 规格）：
+    #      上=上家「未报数」框下沿再隔 0.2 倍「未报数」行距；左=屏幕左沿隔
+    #      0.2 倍行距；下=屏幕下沿隔 0.2 倍行距；右=「对方打X」按钮竖直中线。
+    #      手牌区左沿避让面板（见 _build_hand），settings["teaching"] 关闭时整组隐藏。
+    TEACH_PANEL_RIGHT = 0.226    # 「对方打X」框中线（fx1=0.155+宽0.142/2，窗口比）
+
+    @staticmethod
+    def _teach_gap():
+        """0.2 倍「未报数」行距（上家剩牌框高 0.068H，P_LAYOUT[3]["count"]）。"""
+        return int(0.2 * 0.068 * Window.height)
+
+    def _toggle_teaching(self):
+        self._teach_open = not self._teach_open
+        self.refresh()
+
+    def _build_teaching(self):
+        if not self.app.settings.get("teaching", True):
+            return
+        W, H = Window.width, Window.height
+        gap = self._teach_gap()
+        x1, y1 = gap, gap
+        x2 = int(self.TEACH_PANEL_RIGHT * W)
+        y2 = int(self.P_LAYOUT[3]["count"][1] * H) - gap
+        if self._teach_open:
+            self._draw_teach_panel(x1, y1, x2 - x1, y2 - y1, gap)
+        # 切换按钮：教学区上方（上家「未报数」行竖直中线），右沿与面板右沿对齐
+        bw, bh = int(0.075 * W), max(30, int(0.048 * H))
+        cy = int((self.P_LAYOUT[3]["count"][1] + self.P_LAYOUT[3]["count"][3]) / 2 * H)
+        self.add_widget(FlatButton("收起" if self._teach_open else "教学",
+                                   GREEN, self._toggle_teaching,
+                                   text_color=(1, 1, 1, 1),
+                                   pos=(x2 - bw - 6, cy - bh // 2),
+                                   size=(bw, bh)))
+
+    def _draw_teach_panel(self, x1, y1, pw, ph, gap):
+        """9 行三模块网格：1-2 核心牌剩余 / 3-6 已出牌型 / 7-9 推测预留。
+
+        控件用现有 Panel(底色格)+Label 组合即可表达等宽列，无需新控件。
+        """
+        self.add_widget(Panel(pos=(x1, y1), size=(pw, ph), radius=8))
+        pad = max(4, gap // 2)
+        bgap = max(5, gap // 2)
+        lh = (ph - 2 * pad - 2 * bgap) // 9
+        fs = max(10, int(lh * 0.50))            # 数值字号
+        fs_col = max(8, int(lh * 0.30))         # 列头/行头字号（容纳「32」两字）
+        cw1 = (pw - 2 * pad) / 7.0              # 模块1 七等宽列（上下对齐）
+        cw2 = (pw - 2 * pad) / 10.0             # 模块2 十等分：行头2格+数据8列
+        head_w = 2 * cw2
+        HEAD_C = (0.85, 0.82, 0.66, 1)
+        BD_C = (0.55, 0.52, 0.40, 0.45)         # 模块边框色（同模块3）
+
+        def cell(cx, cy, cw, ch, text, fsize, bold=False, color=WHITE):
+            lb = _label(text, size=fsize, color=color, bold=bold)
+            lb.size_hint = (None, None)
+            lb.pos = (int(cx), int(cy))
+            lb.size = (int(cw), int(ch))
+            self.add_widget(lb)
+
+        top = y1 + ph - pad
+        # 模块1（第1-2行）：边框 + 列头 / 剩余张数（0=出完，加粗金色突出）
+        self.add_widget(Panel(pos=(x1 + pad, top - 2 * lh),
+                              size=(int(pw - 2 * pad), 2 * lh),
+                              color=(0, 0, 0, 0), border=BD_C, radius=6))
+        for i, htxt in enumerate(("王", "级", "配", "A", "K", "10", "5")):
+            cell(x1 + pad + i * cw1, top - lh, cw1, lh, htxt, fs_col, color=HEAD_C)
+        for i, v in enumerate(observer.Observer(self.game, 0).core_residue()):
+            dead = (v == 0)
+            cell(x1 + pad + i * cw1, top - 2 * lh, cw1, lh, str(v), fs,
+                 bold=dead, color=GOLD if dead else WHITE)
+        # 模块2（第3-6行）：边框 + 标题行（两个空白格+8列）/ 三家已出情况
+        m2 = top - 2 * lh - bgap
+        self.add_widget(Panel(pos=(x1 + pad, m2 - 4 * lh),
+                              size=(int(pw - 2 * pad), 4 * lh),
+                              color=(0, 0, 0, 0), border=BD_C, radius=6))
+        cell(x1 + pad, m2 - lh, head_w, lh, "", fs_col)     # 两个空白格（行头位）
+        for i, c in enumerate(observer.COMBO_COLS):
+            cell(x1 + pad + head_w + i * cw2, m2 - lh, cw2, lh, c, fs_col,
+                 color=HEAD_C)
+        tr = self._tracker
+        for r, pid in enumerate((2, 3, 1)):                 # 对家 / 上家 / 下家
+            ry = m2 - (r + 2) * lh
+            cell(x1 + pad, ry, head_w, lh,
+                 {2: "对家", 3: "上家", 1: "下家"}[pid], fs_col)
+            prow = tr.played[pid] if tr else [0] * 8
+            for i in range(8):
+                cell(x1 + pad + head_w + i * cw2, ry, cw2, lh,
+                     str(prow[i]) if prow[i] > 0 else "", fs)
+        # 模块3（第7-9行）：剩牌推测（界面与 PlayTracker.predict_rows 接口预留）
+        self.add_widget(Panel(pos=(x1 + pad, y1 + pad),
+                              size=(int(pw - 2 * pad), 3 * lh),
+                              color=(0, 0, 0, 0), border=BD_C,
+                              radius=6))
+        ph_lb = _label("剩牌推测 · 接口预留", size=fs_col,
+                       color=(0.72, 0.72, 0.64, 1))
+        ph_lb.size_hint = (None, None)
+        ph_lb.pos = (x1 + pad, y1 + pad + (3 * lh - lh) // 2)
+        ph_lb.size = (int(pw - 2 * pad), lh)
+        self.add_widget(ph_lb)
 
     # ---- 四名玩家：头像 + 名字（上方）+ 剩牌数（下方）
     def _turn_badges(self) -> Dict[int, str]:
@@ -724,7 +868,7 @@ class TableScreen(Screen):
         g = self.game
         badges = self._turn_badges()
         thr = self.app.settings["report_threshold"]
-        fs = 48
+        fs = self._text_fs()   # 头像旁文字：统一基准字号
         for pid, lay in self.P_LAYOUT.items():
             ax, ay, aw, ah = self._rect(*lay["avatar"])
             self.add_widget(Panel(pos=(ax, ay), size=(aw, ah),
@@ -768,12 +912,13 @@ class TableScreen(Screen):
             self._build_settlement(zones)
             return
 
-        # 实时位次：玩家一出完牌即在其分区靠边界处显示名次（字号 40）
+        # 实时位次：玩家一出完牌即在其分区靠边界处显示名次（统一基准字号）
         if g.phase == "playing" and g.finish_order:
             ranks = ["头游", "二游", "三游", "末游"]
+            fs = self._text_fs()
             for i, pid in enumerate(g.finish_order[:4]):
                 zx, zy, zw, zh = zones[pid]
-                lw, lh = int(2.6 * 40), int(1.4 * 40)
+                lw, lh = int(2.6 * fs), int(1.4 * fs)
                 if pid == 2:      # 贴出牌区上边界
                     lx, ly = zx + (zw - lw) / 2, zy + zh - lh
                 elif pid == 0:    # 贴出牌区下边界
@@ -783,7 +928,7 @@ class TableScreen(Screen):
                 else:             # 贴出牌区右边界
                     lx, ly = zx + zw - lw, zy + (zh - lh) / 2
                 self._add_label((int(lx), int(ly), lw, lh), f"[b]{ranks[i]}[/b]",
-                                size=40, color=(1.0, 0.85, 0.35, 1), bold=True)
+                                size=fs, color=(1.0, 0.85, 0.35, 1), bold=True)
 
         badges = self._turn_badges()
         if g.phase == "playing" and time.monotonic() < self._tribute_hold_until:
@@ -805,8 +950,7 @@ class TableScreen(Screen):
                 if d["action"] == "play":
                     self._draw_mini(d["combo"].cards, zone, up=up, align=align)
                 else:
-                    self._zone_label(zone, "不  出", size=max(24, int(0.050 * H)),
-                                     up=up)
+                    self._zone_label(zone, "不  出", size=self._text_fs(), up=up)
                 shown = True
             elif pid in g.tribute_displays and g.phase in ("tribute", "playing") \
                     and not (pid == 0 and g.phase == "tribute"):
@@ -819,7 +963,8 @@ class TableScreen(Screen):
                 shown = False   # 轮到该家出牌：清除其上一轮出牌/不出展示，以免干扰
             if not shown and g.tribute_refused and pid in g.tribute_refused_by \
                     and pid not in g.finish_order:
-                self._zone_label(zone, "抗贡！", color=(1, 0.35, 0.30, 1), up=up)
+                self._zone_label(zone, "抗贡！", size=self._text_fs(),
+                                 color=(1, 0.35, 0.30, 1), up=up)
                 shown = True
             zone_shown[pid] = shown
 
@@ -849,6 +994,34 @@ class TableScreen(Screen):
             self._badge_geo[pid] = (bxi, byi, d)
             self.add_widget(CircleBadge(text, pos=(bxi, byi), size=(d, d)))
 
+    def _save_replay(self):
+        """手动保存整场比赛记录到 replays/（同一场重复保存覆盖同文件）。"""
+        rec = self._recorder
+        if rec is None:
+            self._toast_msg("本局未录制复盘数据")
+            return
+        try:
+            from replay_ui import save_replay
+            path = save_replay(rec.to_dict(), prev=self._replay_saved_path)
+        except Exception as e:
+            self._toast_msg(f"保存失败：{e}")
+            return
+        self._replay_saved_path = path
+        self._toast_msg("已保存：" +
+                        os.path.splitext(os.path.basename(path))[0])
+
+    def _compute_scores(self):
+        """结算打分：重演当前 record（专家对比法），缓存后重画结算页。"""
+        rec = self._recorder
+        if rec is None:
+            return
+        try:
+            self._scores = scorer.score_record(rec.to_dict())["scores"]
+        except Exception:            # 打分失败不阻塞结算页
+            self._scores = None
+            return
+        self.refresh()
+
     def _build_settlement(self, zones):
         """局终结算：头游~末游 + 「X方胜，下局打X」 + 下一局/退出按钮。"""
         g = self.game
@@ -859,34 +1032,42 @@ class TableScreen(Screen):
         ranks = ["头游", "二游", "三游", "末游"]
         auto = set(g.round_result.get("auto_last", [])) if g.round_result else set()
         fo = g.round_result["finish_order"] if g.round_result else list(g.finish_order)
+        sc = self._scores or {}
+        fs = self._text_fs()
         for i, pid in enumerate(fo[:4]):
-            # 未打完被记末游的玩家直接标「末游」，其余按标准名次
-            self._zone_label(zones[pid], "末游" if pid in auto else ranks[i],
-                             size=40, color=(1.0, 0.85, 0.35, 1))
+            # 未打完被记末游的玩家直接标「末游」，其余按标准名次；后缀打分（专家对比法）
+            rank = "末游" if pid in auto else ranks[i]
+            s = sc.get(pid)
+            self._zone_label(zones[pid], f"{rank} {s:.0f}" if s is not None else rank,
+                             size=fs, color=(1.0, 0.85, 0.35, 1))
         if g.phase == "match_over":
             big = "我方获胜！" if g.match_winner == 0 else "对方获胜！"
-            self._center_text(mx, my + 0.014 * H, f"[b]{big}[/b]", 26, (1.0, 0.90, 0.40, 1))
+            self._center_text(mx, my + 0.014 * H, f"[b]{big}[/b]", fs,
+                              (1.0, 0.90, 0.40, 1))
             btn1 = ("再来一局", GREEN, self._on_new_match)
         else:
             wt = g.round_result["winner_team"] if g.round_result else 0
             who = "我方胜" if wt == 0 else "对方胜"
             sub = f"下局：我方打{RANK_LABELS[g.levels[0]]} · 对方打{RANK_LABELS[g.levels[1]]}"
-            self._center_text(mx, my + 0.014 * H, f"[b]{who}[/b]　{sub}", 20,
+            self._center_text(mx, my + 0.014 * H, f"[b]{who}[/b]　{sub}", fs,
                               (1.0, 0.90, 0.40, 1))
             btn1 = ("下一局", GREEN, self._on_next_round)
         bw, bh = int(0.105 * W), int(0.060 * H)
         by = int(my - 0.075 * H)
-        self.add_widget(FlatButton(btn1[0], btn1[1], btn1[2],
-                                   pos=(int(mx - bw - 6), by), size=(bw, bh)))
-        self.add_widget(FlatButton("退出", (0.55, 0.18, 0.16, 1),
-                                   lambda: App.get_running_app().stop(),
-                                   pos=(int(mx + 6), by), size=(bw, bh)))
+        btns = [btn1,
+                ("保存复盘", BLUE, self._save_replay),
+                ("退出", (0.55, 0.18, 0.16, 1), lambda: App.get_running_app().stop())]
+        x0 = int(mx - (len(btns) * bw + (len(btns) - 1) * 6) / 2)
+        for i, (t, c, cb) in enumerate(btns):
+            self.add_widget(FlatButton(t, c, cb,
+                                       pos=(x0 + i * (bw + 6), by), size=(bw, bh)))
 
     def _center_text(self, mx, y, text, size, color):
         W, H = Window.width, Window.height
+        # 宽度放大到 0.60W：基准字号下「我方胜　下局：…」单行可容纳
         self.add_widget(_label(text, size=size, color=color,
-                               pos=(int(mx - 0.19 * W), int(y - 0.026 * H)),
-                               widget_size=(int(0.38 * W), int(0.052 * H))))
+                               pos=(int(mx - 0.30 * W), int(y - 0.026 * H)),
+                               widget_size=(int(0.60 * W), int(0.052 * H))))
 
     def _zone_label(self, zone, text, size=18, color=(0.95, 0.90, 0.70, 1), up=False):
         zx, zy, zw, zh = zone
@@ -921,13 +1102,36 @@ class TableScreen(Screen):
             self.add_widget(CardWidget(c, self.game.level, on_tap=None, show_face=True,
                                        pos=(sx + i * step, sy), size=(cw, ch)))
 
+    # ---- 观战模式：我（0）已出完，对家(2)手牌亮出于手牌区，AI 提速
+    def _spectator(self) -> bool:
+        g = self.game
+        return g.phase == "playing" and 0 in g.finish_order and bool(g.hands.get(2))
+
     # ---- 底部手牌区（无底色）：炸弹/同花顺左、普通牌分列居中、组合牌右
     def _build_hand(self):
         g = self.game
         self._hand_widgets = {}
-        # 右缘距同花顺框左缘（0.910W）保留 1/5 框宽（0.070W/5=0.014W）→ 0.896W
-        x, y, w, h = self._rect(0.080, 0.012, 0.896, 0.517)
-        bombs, combos = self.mgr.arranged_layout()
+        # 左缘：教学模式避让教学面板（0.226W + 0.2 倍「未报数」行距），
+        # 非教学模式回旧位 0.080W；右缘距同花顺框左缘（0.910W）0.2 倍
+        # 「未报数」行距；区宽变窄由列间重叠（col_step/stack_step 下限
+        # 0.30cw）自适应，牌宽不压缩
+        gap = self._teach_gap()
+        W, H = Window.width, Window.height
+        x = int(0.226 * W) + gap if self._teach_open else int(0.080 * W)
+        x2 = int(0.910 * W) - gap
+        y = int(0.012 * H)
+        w = x2 - x
+        if self._spectator():
+            # 我已出完：对家(2)手牌按我的手牌方式整理展示（明牌不可点）
+            m = HandManager(g, pid=2)
+            m.auto_arrange()
+            self._layout_hand(m, x, y, w)
+            return
+        self._layout_hand(self.mgr, x, y, w)
+
+    def _layout_hand(self, mgr, x, y, w):
+        """手牌布局：左炸弹/同花顺组、中普通牌按点数分列、右非炸弹组。"""
+        bombs, combos = mgr.arranged_layout()
         nb, ncc = len(bombs), len(combos)
         # 牌面尺寸锁定：按「6 张一列恰好到出牌区下沿」计算一次
         # （ch + 5×0.30ch = 2.5ch = 区下沿至出牌区下沿），不随实际列长调整
@@ -936,7 +1140,7 @@ class TableScreen(Screen):
         gap = 8
         pad = 5
         stack_step = cw + 10
-        cols = self.mgr.column_layout()
+        cols = mgr.column_layout()
         nc = max(1, len(cols))
         step = 0.30 * ch
         left_w = nb * stack_step
@@ -958,7 +1162,7 @@ class TableScreen(Screen):
         # 左侧炸弹/同花顺组（同尺寸竖排，紧贴普通牌左侧，底部与普通牌对齐）
         sx = start
         for gi, eids in bombs:
-            self._draw_stack(eids, sx, y + pad, cw, ch)
+            self._draw_stack(eids, sx, y + pad, cw, ch, mgr)
             sx += stack_step
         # 中间普通手牌（按点数分列，列内纵向重叠）
         nx0 = start + left_w
@@ -966,38 +1170,40 @@ class TableScreen(Screen):
             colx = nx0 + ci * col_step
             # 列内纵向重叠：底牌最后添加（在最上层，整张可见）
             for k in reversed(range(len(col))):
-                c = self.mgr.card_by_eid(col[k])
-                self._add_hand_card(c, colx, y + pad + k * step, cw, ch)
+                c = mgr.card_by_eid(col[k])
+                self._add_hand_card(c, colx, y + pad + k * step, cw, ch, mgr)
         # 右侧非炸弹牌组（同尺寸竖排，紧贴普通牌右侧，底部与普通牌对齐）
         sx = nx0 + normal_total + 10
         for gi, eids in combos:
-            self._draw_stack(eids, sx, y + pad, cw, ch)
+            self._draw_stack(eids, sx, y + pad, cw, ch, mgr)
             sx += stack_step
 
-    def _add_hand_card(self, card: Card, cx, cy, cw, ch):
+    def _add_hand_card(self, card: Card, cx, cy, cw, ch, mgr=None):
         if card is None:
             return
+        mgr = mgr or self.mgr
         wid = CardWidget(card, self.game.level, on_tap=None,
-                         selected=(card.eid in self.mgr.selected),
+                         selected=(card.eid in mgr.selected),
                          pos=(cx, cy), size=(cw, ch))
         self._hand_widgets[card.eid] = wid
         self.add_widget(wid)
 
-    def _draw_stack(self, eids: List[int], cx, cy_bottom, cw, ch):
+    def _draw_stack(self, eids: List[int], cx, cy_bottom, cw, ch, mgr=None):
         """竖排牌组：底部与普通手牌对齐，固定重叠率露出每张牌角标；
         同点牌组从下到上按黑桃/红桃/梅花/方块排列；
         底牌最后添加（整张可见）；超出区高时向上突破（如 7 炸）。"""
+        mgr = mgr or self.mgr
         n = len(eids)
         if n == 0:
             return
         step = 0.30 * ch if n > 1 else 0
         base_y = cy_bottom
         col = list(eids)
-        if len({self.mgr.card_by_eid(e).rank for e in col}) == 1:
-            col.sort(key=lambda e: (int(self.mgr.card_by_eid(e).suit), e))
+        if len({mgr.card_by_eid(e).rank for e in col}) == 1:
+            col.sort(key=lambda e: (int(mgr.card_by_eid(e).suit), e))
         for k in reversed(range(n)):
-            c = self.mgr.card_by_eid(col[k])
-            self._add_hand_card(c, cx, base_y + k * step, cw, ch)
+            c = mgr.card_by_eid(col[k])
+            self._add_hand_card(c, cx, base_y + k * step, cw, ch, mgr)
 
     # ---- 右侧竖列（原出牌按钮位置）：整理手牌 / 恢复手牌 / 同花顺框
     # （按钮宽为原出牌按钮 2/3、右缘与其右缘齐平；按钮高度=出牌按钮高度；
@@ -1177,12 +1383,37 @@ class TableScreen(Screen):
         except GameError as e:
             self._toast_msg(str(e))
             return
+        self._attach_recorder()      # 新比赛起点：重挂 Recorder（打分/复盘数据源）
+        self._attach_tracker()       # 新比赛起点：重挂教学数据跟踪
         self.mgr.clear_groups()
         self.mgr.clear_selection()
         self.mgr.sync()
         self._last_round = -1
         self._alerted = set()
         self.refresh()
+
+    def _attach_recorder(self):
+        """在比赛起点挂 Recorder；失败（非起点）静默放弃，仅损失打分。"""
+        if self._recorder is not None:
+            self._recorder.detach(self.game)   # 防止「再来一局」双录
+        self._recorder = None
+        self._replay_saved_path = None
+        self._scores = None
+        rec = Recorder(seed=self.app.seed)
+        try:
+            rec.attach(self.game)
+        except ValueError:
+            return
+        self._recorder = rec
+
+    def _attach_tracker(self):
+        """在比赛起点挂教学数据跟踪（observer.PlayTracker）；非起点静默放弃。"""
+        if self._tracker is not None:
+            self._tracker.detach(self.game)
+        self._tracker = None
+        tr = observer.PlayTracker()
+        if tr.attach(self.game):
+            self._tracker = tr
 
     def _on_next_round(self):
         try:
@@ -1193,6 +1424,7 @@ class TableScreen(Screen):
         self.mgr.sync()
         self._last_round = -1
         self._alerted = set()
+        self._scores = None          # 新一局重算累计分
         self.refresh()
 
     def _on_sf(self, suit):
@@ -1320,15 +1552,20 @@ class TableScreen(Screen):
         if g.turn != 0:
             if not self._ai_scheduled:
                 self._ai_scheduled = True
-                Clock.schedule_once(self._ai_step, self.app.settings["ai_delay"])
+                # 观战（我已出完）时 AI 提速到最快
+                d = 0.05 if self._spectator() else self.app.settings["ai_delay"]
+                Clock.schedule_once(self._ai_step, d)
 
     def _ai_step(self, dt):
         self._ai_scheduled = False
         g = self.game
         if g.phase == "playing" and g.turn != 0:
             pid = g.turn
-            enh = self.app.settings.get("ai_strength") == "high"
-            kind, cards = choose_action(g, pid, self.app.profiles[pid], enhanced=enh)
+            kind, cards = strategy_choose(g, pid, self.app.profiles[pid],
+                                          resolve_seat(self.app.settings, pid))
+            # 出牌理由（复盘「理由区」数据源）：决策时刻生成，挂到本条动作
+            reason = explain_choice(g, pid, kind, cards) \
+                if self._recorder is not None else ""
             if kind == "play":
                 combo = g.play(pid, cards)
                 self.app.sounds.play(event_for_combo(combo))
@@ -1339,15 +1576,51 @@ class TableScreen(Screen):
                 self.app.sounds.play("pass")
                 if not g.trick_displays:   # 一轮结束：最后过牌者（上家）的
                     self._trick_snapshot = pre   # 「不出」也要进入保留快照
-                    self._trick_hold_until = time.monotonic() + 1.5
+                    self._trick_hold_until = time.monotonic() + \
+                        (0.3 if self._spectator() else 1.5)
+            if reason and self._recorder is not None and self._recorder.actions:
+                last = self._recorder.actions[-1]
+                if last.get("pid") == pid:
+                    last["reason"] = reason
             self.mgr.sync()
             self.refresh()
+
+    # ---- 载入牌局（复盘「载入/载入局势」入口）：以给定局面接管正常对局
+    def load_game(self, game, seed=None):
+        """用外部重建的局面替换当前牌桌对局（seed=局面来源存档的 seed）。
+
+        - 起点局面（清单载入）：Recorder 可正常挂载，复盘/打分可用；
+        - 中途局面（载入局势）：非比赛起点，挂载静默失败 → 续局不录制
+          （2026-10-14 已确认的简化口径），开新局后恢复录制。
+        """
+        if seed is not None:
+            self.app.seed = seed
+        if self._recorder is not None:
+            self._recorder.detach(self.game)
+        self._recorder = None
+        self._replay_saved_path = None
+        self._scores = None
+        self.app.game = game
+        self.game = game
+        self.mgr = HandManager(game, pid=0)
+        self._attach_recorder()      # 起点成功 / 中途静默失败
+        self._attach_tracker()
+        self.mgr.sync()
+        self._last_round = -1
+        self._alerted = set()
+        self._prev_phase = game.phase
+        self._prev_trick = {}
+        self._trick_snapshot = {}
+        self._trick_hold_until = 0.0
+        self._tribute_hold_until = 0.0
+        self._update_mode()
+        self.refresh()
 
     def _toast_msg(self, text):
         W, H = Window.width, Window.height
         if self._toast:
             self.remove_widget(self._toast)
-        t = _label(text, size=18, color=(1, 1, 0.5, 1), bold=True)
+        t = _label(text, size=self._text_fs(), color=(1, 1, 0.5, 1), bold=True)
         t.size_hint = (None, None)
         t.pos = (int(W * 0.25), int(H * 0.42))
         t.size = (int(W * 0.5), 40)
@@ -1363,10 +1636,11 @@ class TableScreen(Screen):
 
 # ---------------------------------------------------------------- 设置页（仅可调整项）
 class SettingsScreen(Screen):
-    """设置页：报牌阈值 / 低牌提示 / 音效 / 背景乐 / AI 牌力。
+    """设置页：报牌阈值 / 低牌提示 / 音效 / 背景乐 / AI 牌力 / 座位策略。
 
-    不含操作与规则说明；全部控件尺寸按窗口高度比例缩放，
-    保证安卓高分屏与桌面窗口上字号同样清晰。
+    座位 1/2/3（AI）可单独选择策略档（跟随默认/低/高），「跟随默认」
+    回退全局 AI 牌力。不含操作与规则说明；全部控件尺寸按窗口高度比例
+    缩放，保证安卓高分屏与桌面窗口上字号同样清晰。
     """
 
     BGM_OPTIONS = [("关", "off"), ("曲目一", "track1"), ("曲目二", "track2")]
@@ -1447,16 +1721,64 @@ class SettingsScreen(Screen):
 
         r5 = row()
         r5.add_widget(_label("AI 牌力：", size=fs, halign="left", size_hint=(0.52, 1)))
-        self.ai_high = CheckBox(group="ai", active=(s.get("ai_strength") == "high"),
+        _ai = s.get("ai_strength")
+        self.ai_high = CheckBox(group="ai", active=(_ai == "high"),
                                 size_hint=(None, 1), width=cw)
-        self.ai_low = CheckBox(group="ai", active=(s.get("ai_strength") != "high"),
+        self.ai_low = CheckBox(group="ai",
+                               active=(_ai not in ("high", "pimc")),
                                size_hint=(None, 1), width=cw)
+        self.ai_pimc = CheckBox(group="ai", active=(_ai == "pimc"),
+                                size_hint=(None, 1), width=cw)
         r5.add_widget(_label("高", size=fs, halign="center",
                              size_hint=(None, 1), width=int(0.055 * W)))
         r5.add_widget(self.ai_high)
         r5.add_widget(_label("低", size=fs, halign="center",
                              size_hint=(None, 1), width=int(0.055 * W)))
         r5.add_widget(self.ai_low)
+        r5.add_widget(_label("夯", size=fs, halign="center",
+                             size_hint=(None, 1), width=int(0.055 * W)))
+        r5.add_widget(self.ai_pimc)
+
+        r5b = row()
+        r5b.add_widget(_label("教学面板：", size=fs, halign="left",
+                             size_hint=(0.52, 1)))
+        self.teach_cb = CheckBox(active=bool(s.get("teaching", True)),
+                                 size_hint=(None, 1), width=cw)
+        r5b.add_widget(self.teach_cb)
+        r5b.add_widget(_label("开启（牌桌左缘「教学」按钮）", size=fs,
+                             halign="left", size_hint=(0.42, 1)))
+
+        # 每座位策略覆盖（座位 1/2/3 为 AI；0 为人类玩家）。点击循环切换，
+        # 「跟随默认」= 回退上方全局 AI 牌力；保存后下一手 AI 即生效。
+        SEAT_OPTIONS = [("跟随默认", None), ("低", "classic_low"),
+                        ("高", "classic_high"), ("夯", "pimc")]
+        seats_cfg = s.get("seats") or {}
+        self.seat_choice = {}
+        self.seat_btns = {}
+        for pid in (1, 2, 3):
+            val = seats_cfg.get(str(pid))
+            if val not in (None, "classic_low", "classic_high", "pimc"):
+                val = None
+            self.seat_choice[pid] = val
+
+            def _cycle(p=pid):
+                idx = next(i for i, (_, v) in enumerate(SEAT_OPTIONS)
+                           if v == self.seat_choice[p])
+                _, nv = SEAT_OPTIONS[(idx + 1) % len(SEAT_OPTIONS)]
+                self.seat_choice[p] = nv
+                self.seat_btns[p].set_text(
+                    next(t for t, v in SEAT_OPTIONS if v == nv))
+
+            r6 = row()
+            r6.add_widget(_label(f"座位{pid}策略：", size=fs, halign="left",
+                                 size_hint=(0.52, 1)))
+            btn = FlatButton(next(t for t, v in SEAT_OPTIONS if v == val),
+                             GREEN, _cycle, size_hint=(None, 1),
+                             width=int(0.16 * W))
+            self.seat_btns[pid] = btn
+            r6.add_widget(btn)
+            r6.add_widget(_label("点击切换", size=fs, halign="left",
+                                 size_hint=(0.3, 1), color=(0.8, 0.8, 0.8, 1)))
 
         bh = max(40, int(0.062 * H))
         box.add_widget(FlatButton("保存设置", GREEN, self._on_save,
@@ -1476,7 +1798,10 @@ class SettingsScreen(Screen):
         for cb, val in self.bgm_cbs:
             if cb.active:
                 s["bgm"] = val
-        s["ai_strength"] = "high" if self.ai_high.active else "low"
+        s["ai_strength"] = ("high" if self.ai_high.active
+                            else "pimc" if self.ai_pimc.active else "low")
+        s["teaching"] = bool(self.teach_cb.active)
+        s["seats"] = {str(pid): self.seat_choice[pid] for pid in (1, 2, 3)}
         save_settings(s)
         self.app.sounds.update_bgm()     # 背景乐选择/开关即时生效
         self.app.table.refresh()
@@ -1491,8 +1816,10 @@ class GuandanApp(App):
     def __init__(self, seed=None, **kw):
         super().__init__(**kw)
         self.settings = load_settings()
-        rng = random.Random(seed)
-        self.game = GuandanGame(rng=rng)
+        if seed is None:                 # 显式化数值 seed：Recorder 重演打分依赖
+            seed = random.randrange(2 ** 31)
+        self.seed = seed
+        self.game = GuandanGame(rng=random.Random(seed))
         self.mgr = HandManager(self.game, pid=0)
         self.sounds = SoundManager(lambda: self.settings)
         self.profiles = [None, AIProfile("aggressive"), AIProfile("balanced"),
@@ -1500,8 +1827,11 @@ class GuandanApp(App):
         self.sm = ScreenManager(transition=NoTransition())
         self.table = TableScreen(self, name="table")
         self.settings_screen = SettingsScreen(self, name="settings")
+        from replay_ui import ReplayScreen   # 延迟 import：replay_ui 反向延迟用 ui 组件
+        self.replay_screen = ReplayScreen(self, name="replay")
         self.sm.add_widget(self.table)
         self.sm.add_widget(self.settings_screen)
+        self.sm.add_widget(self.replay_screen)
 
     def build(self):
         Window.min_size = (900, 560)
@@ -1541,6 +1871,11 @@ class GuandanApp(App):
 
     def goto(self, name):
         self.sm.current = name
+        # Kivy 仅在 window canvas 脏时绘制+翻帧（base.py EventLoop.idle）；
+        # 结算后 _pump 停摆，切屏的组件变化不保证产生新帧 → 黑屏。
+        # 强制标脏数帧兜底（与启动/后台返回黑屏同一修复模式）。
+        for t in (0.05, 0.3):
+            Clock.schedule_once(lambda dt: Window.canvas.ask_update(), t)
 
     def ai_tribute_step(self) -> bool:
         """推进一个 AI 进贡/还贡动作；仅剩人类任务（或全部完成）时返回 False。

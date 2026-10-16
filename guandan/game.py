@@ -18,8 +18,9 @@
 """
 from __future__ import annotations
 
+import copy
 import random
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from cards import BIG_JOKER, Card, build_deck, point_value
 from rules import Combo, RuleConfig, can_play
@@ -64,7 +65,19 @@ class GuandanGame:
         self.next_leader = 0
         self.log: List[str] = []
         self.played_cards: List[Card] = []   # 本局已打出的实体牌（记牌器数据源）
+        # 事件监听（Recorder/打分/观察者等共挂）：fn(game, event, data)
+        self.listeners: List[Callable[[Any, str, dict], None]] = []
         self.start_match()
+
+    # ------------------------------------------------------------------ 事件
+    def _notify(self, event: str, **kw) -> None:
+        """向所有监听器广播事件；单个监听器异常不外抛、不影响牌局。"""
+        data = dict(kw)
+        for fn in list(self.listeners):
+            try:
+                fn(self, event, data)
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------ 基础
     @staticmethod
@@ -135,6 +148,9 @@ class GuandanGame:
             self.phase = "playing"
             self.turn = leader
         self.log.append(f"=== 第{self.round_number}局 打{self._rank_text(self.level)} 首出P{self.turn} ===")
+        self._notify("round_start", round_number=self.round_number,
+                     level=self.level, turn=self.turn, phase=self.phase,
+                     tribute_refused=self.tribute_refused)
 
     def _rank_text(self, rank: int) -> str:
         from cards import RANK_LABELS
@@ -167,6 +183,7 @@ class GuandanGame:
         self.tribute_done[giver] = receiver
         self.tribute_displays[giver] = {"kind": "tribute", "card": card}
         self.log.append(f"P{giver} 进贡 {card.label()} 给 P{receiver}")
+        self._notify("tribute", pid=giver, receiver=receiver, eid=card.eid)
         self._maybe_finish_tribute_phase()
         return card
 
@@ -189,6 +206,7 @@ class GuandanGame:
         self.return_done[receiver] = giver
         self.tribute_displays[receiver] = {"kind": "return", "card": card}
         self.log.append(f"P{receiver} 还贡 {card.label()} 给 P{giver}")
+        self._notify("return", pid=receiver, giver=giver, eid=card.eid)
         self._maybe_finish_tribute_phase()
         return card
 
@@ -232,6 +250,7 @@ class GuandanGame:
         self.trick_displays[pid] = {"action": "play", "combo": combo}
         self.passed_since = set()
         self.log.append(f"P{pid} 出 {combo.describe()}")
+        self._notify("play", pid=pid, eids=[c.eid for c in real], combo=combo)
         if not self.hands[pid]:
             self.finish_order.append(pid)
             self.log.append(f"P{pid} 成为第{len(self.finish_order)}游")
@@ -262,6 +281,7 @@ class GuandanGame:
         self.passed_since.add(pid)
         self.trick_displays[pid] = {"action": "pass", "combo": None}
         self.log.append(f"P{pid} 过牌")
+        self._notify("pass", pid=pid)
         self._advance()
 
     def _next_active(self, from_pid: int) -> int:
@@ -321,6 +341,10 @@ class GuandanGame:
             self.phase = "match_over"
             self.match_winner = wt
             self.log.append(f"{wt}队打过A，比赛结束")
+            self._notify("round_end", result=dict(self.round_result),
+                         levels=dict(self.levels),
+                         playing_team=self.playing_team)
+            self._notify("match_end", winner=wt, levels=dict(self.levels))
             return
         self.levels[wt] = min(14, self.levels[wt] + delta)
         self.playing_team = wt
@@ -332,6 +356,8 @@ class GuandanGame:
         else:
             self.tribute_pairs = [(last, head)]
         self.phase = "round_over"
+        self._notify("round_end", result=dict(self.round_result),
+                     levels=dict(self.levels), playing_team=self.playing_team)
 
     def start_next_round(self) -> None:
         if self.phase == "match_over":
@@ -339,3 +365,46 @@ class GuandanGame:
         if self.phase != "round_over":
             raise GameError("本局尚未结束")
         self._deal_round(leader=self.next_leader)
+
+    # ------------------------------------------------------------------ 克隆
+    def clone(self, rng: Optional[random.Random] = None) -> "GuandanGame":
+        """深拷贝当前完整局面（PIMC 搜索 / 复盘回推的地基）。
+
+        - Card / Combo 对象只读，全部共享引用（eid 唯一，无副作用）；
+        - 可变容器（hands/log/played_cards/各字典列表）逐个浅拷贝元素；
+        - ``listeners`` 不拷贝（监听器挂在原局面，克隆局面从零开始）；
+        - rng 默认 deepcopy（与原局面后续发牌完全同态且互不干扰），
+          也可显式传入新 Random（此时下一局起洗牌序列不同）。
+        """
+        new = GuandanGame.__new__(GuandanGame)
+        new.rng = rng if rng is not None else copy.deepcopy(self.rng)
+        new.levels = dict(self.levels)
+        new.playing_team = self.playing_team
+        new.round_number = self.round_number
+        new.phase = self.phase
+        new.hands = {pid: list(h) for pid, h in self.hands.items()}
+        new.turn = self.turn
+        new.last_play = None if self.last_play is None else \
+            (self.last_play[0], self.last_play[1])
+        new.trick_displays = {pid: dict(d) for pid, d in self.trick_displays.items()}
+        new.passed_since = set(self.passed_since)
+        new.finish_order = list(self.finish_order)
+        new.tribute_pairs = list(self.tribute_pairs)
+        new.tribute_done = dict(self.tribute_done)
+        new.return_done = dict(self.return_done)
+        new.tribute_refused = self.tribute_refused
+        new.tribute_displays = {pid: dict(d)
+                                for pid, d in self.tribute_displays.items()}
+        new.tribute_refused_by = list(self.tribute_refused_by)
+        new.round_result = None if self.round_result is None else \
+            dict(self.round_result)
+        new.match_winner = self.match_winner
+        new.next_leader = self.next_leader
+        new.log = list(self.log)
+        new.played_cards = list(self.played_cards)
+        new.listeners = []
+        if hasattr(self, "_round_head"):
+            new._round_head = self._round_head
+        if hasattr(self, "_round_last"):
+            new._round_last = self._round_last
+        return new
