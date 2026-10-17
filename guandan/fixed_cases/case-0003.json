@@ -1,0 +1,33 @@
+{
+ "data_version": 1,
+ "case_id": "case-0003",
+ "description": "合理过牌：有人压牌时选择让牌（合法但评分低于出牌的动作）",
+ "review_id": null,
+ "decision_id": "seed=2|r=1|a=1",
+ "seed": 2,
+ "sid": "classic_high",
+ "profiles": [
+  "balanced",
+  "aggressive",
+  "balanced",
+  "conservative"
+ ],
+ "prefix": [
+  {
+   "pid": 0,
+   "kind": "play",
+   "eids": [
+    1,
+    2,
+    14,
+    16,
+    42,
+    82
+   ]
+  }
+ ],
+ "expect": {
+  "pid": 1,
+  "kind": "pass"
+ }
+}

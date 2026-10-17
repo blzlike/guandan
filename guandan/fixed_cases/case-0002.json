@@ -1,0 +1,171 @@
+{
+ "data_version": 1,
+ "case_id": "case-0002",
+ "description": "炸弹压制：用炸弹压过对手行牌、夺取牌权（高成本换主动）",
+ "review_id": null,
+ "decision_id": "seed=19|r=1|a=21",
+ "seed": 19,
+ "sid": "classic_high",
+ "profiles": [
+  "balanced",
+  "aggressive",
+  "balanced",
+  "conservative"
+ ],
+ "prefix": [
+  {
+   "pid": 0,
+   "kind": "play",
+   "eids": [
+    1,
+    28,
+    55,
+    68,
+    82,
+    95
+   ]
+  },
+  {
+   "pid": 1,
+   "kind": "pass"
+  },
+  {
+   "pid": 2,
+   "kind": "pass"
+  },
+  {
+   "pid": 3,
+   "kind": "pass"
+  },
+  {
+   "pid": 0,
+   "kind": "play",
+   "eids": [
+    3,
+    4,
+    16,
+    17,
+    43,
+    96
+   ]
+  },
+  {
+   "pid": 1,
+   "kind": "pass"
+  },
+  {
+   "pid": 2,
+   "kind": "pass"
+  },
+  {
+   "pid": 3,
+   "kind": "pass"
+  },
+  {
+   "pid": 0,
+   "kind": "play",
+   "eids": [
+    19,
+    59,
+    60,
+    85,
+    98
+   ]
+  },
+  {
+   "pid": 1,
+   "kind": "play",
+   "eids": [
+    27,
+    32,
+    40,
+    45,
+    99
+   ]
+  },
+  {
+   "pid": 2,
+   "kind": "play",
+   "eids": [
+    14,
+    20,
+    46,
+    81,
+    87
+   ]
+  },
+  {
+   "pid": 3,
+   "kind": "pass"
+  },
+  {
+   "pid": 0,
+   "kind": "pass"
+  },
+  {
+   "pid": 1,
+   "kind": "play",
+   "eids": [
+    11,
+    30,
+    71,
+    91,
+    104
+   ]
+  },
+  {
+   "pid": 2,
+   "kind": "pass"
+  },
+  {
+   "pid": 3,
+   "kind": "pass"
+  },
+  {
+   "pid": 0,
+   "kind": "pass"
+  },
+  {
+   "pid": 1,
+   "kind": "play",
+   "eids": [
+    7,
+    8,
+    35,
+    61,
+    62,
+    63
+   ]
+  },
+  {
+   "pid": 2,
+   "kind": "pass"
+  },
+  {
+   "pid": 3,
+   "kind": "pass"
+  },
+  {
+   "pid": 0,
+   "kind": "play",
+   "eids": [
+    10,
+    21,
+    22,
+    47,
+    48,
+    77
+   ]
+  }
+ ],
+ "expect": {
+  "pid": 1,
+  "kind": "play",
+  "eids": [
+   29,
+   42,
+   57,
+   70
+  ]
+ }
+}

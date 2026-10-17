@@ -222,9 +222,28 @@ def choose(game: GuandanGame, pid: int,
     n = max(2, min(n, ROLLOUT_BUDGET // len(cands)))   # 自适应预算
     rng = _state_rng(game, pid)
     means = evaluate(game, pid, cands, n, rng, policy)
-    top = max(means)                    # 平局按 _tie_key 取最小者
+    top = max(means)
     finalists = [i for i in range(len(cands)) if means[i] == top]
-    pick = min(finalists, key=lambda i: _tie_key(game, pid, cands[i]))
+    # 4. 收益标准统一（阶段四，任务书五.6）：游次奖励并列时以经典启发式
+    #    评分决胜（启发式口径贯通 PIMC），启发式未覆盖并列者再按 _tie_key。
+    if len(finalists) > 1:
+        hk, hcards = ai.choose_action(game, pid, profile,
+                                      enhanced=True,
+                                      features=ai.HIGH_FEATURES)
+        hkey = None if hk == "pass" else \
+            tuple(sorted(c.eid for c in hcards or ()))
+        pick = None
+        for i in finalists:
+            kind_i, m_i = cands[i]
+            k_i = None if kind_i == "pass" else \
+                tuple(sorted(c.eid for c in m_i.cards))
+            if k_i == hkey:
+                pick = i
+                break
+        if pick is None:
+            pick = min(finalists, key=lambda i: _tie_key(game, pid, cands[i]))
+    else:
+        pick = finalists[0]
     kind, m = cands[pick]
     if kind == "pass":
         return ("pass", None)

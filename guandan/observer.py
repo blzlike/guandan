@@ -6,7 +6,9 @@
 - 玩家0手牌：人类玩家自己的手牌；
 - 对手手牌只做统计推断（未见牌分布），绝不读取、绝不显示。
 
-与 AI 体系互不引用：本模块只依赖 cards/rules/game，不 import ai/registry。
+与 AI 体系互不引用：本模块只依赖 cards/rules/game 与 inference（无状态
+纯函数，任务书五.2 双方各自合法输入调用），不 import ai/registry/decision/
+plan_b/strategy。
 
 PlayTracker 为已出牌数据库（listener 挂载，比赛起点 attach），
 配合 PlayTracker.predict_rows 预留的剩牌推测接口构成面板数据层。
@@ -15,9 +17,11 @@ PlayTracker 为已出牌数据库（listener 挂载，比赛起点 attach），
 """
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from cards import BIG_JOKER, SMALL_JOKER, Card, RANK_LABELS, Suit
+
+import inference
 
 _SUIT_ORDER = (Suit.SPADE, Suit.HEART, Suit.CLUB, Suit.DIAMOND)
 _SUIT_QUOTA = 26          # 每花色配额（13 点 × 2 副）
@@ -144,11 +148,114 @@ class PlayTracker:
             if col is not None:
                 self.played[data["pid"]][col] += 1
 
-    def predict_rows(self):
-        """模块3「剩牌推测」接口（预留，暂不实现）。
+    def predict_rows(self, game=None, pid: int = 0):
+        """模块3「剩牌推测」行（阶段四实装，inference 纯函数驱动）。
 
-        预期返回 [{pid, cells: List[...]}] 形式的推测行数据或 None。
-        TODO(阶段四/五)：基于 PlayTracker 已出统计 + 未见分布做
-        各家剩牌构成推测（如对家可能成炸点位、大概率缺门等）。
+        ``game`` 缺省 None 时返回 None（保留预留接口语义，历史调用兼容）。
+        返回 3 行 [{pid, label, text}]（对家/上家/下家），每行给出该玩家
+        持炸弹概率最高点与可能牌型（剩牌 >10 张时无区分度，如实说明）。
+        推断仅用公开口径数据（``pid`` 视角未见分布 + 各家剩牌数），
+        「不接牌」不作无牌认定（B.4 信息约束）。好友联机时传入本端
+        座位号，方位标签按 (对手座位 - 本座位) mod 4 换算。
         """
-        return None
+        if game is None:
+            return None
+        unseen = inference.unseen_counts(game.hands.get(pid, []),
+                                         game.played_cards)
+        total = sum(unseen.values())
+        conf_cn = {"high": "高", "medium": "中", "low": "低"}
+        pats = {d["pid"]: d for d in inference.pattern_prediction(game, pid)}
+        rows = []
+        for pos, label in ((2, "对家"), (3, "上家"), (1, "下家")):
+            other = (pid + pos) % 4
+            if other in game.finish_order or game.hand_count(other) <= 0:
+                rows.append({"pid": other, "label": label, "text": "已出完"})
+                continue
+            n = game.hand_count(other)
+            parts = []
+            best = None
+            for r, u in unseen.items():
+                if u < 4 or r >= 15:
+                    continue
+                p = inference.hypergeom_at_least(u, n, total, 4)
+                if best is None or p > best[1]:
+                    best = (r, p)
+            if best is not None and best[1] >= 0.05:
+                parts.append(f"炸{RANK_LABELS.get(best[0], best[0])}"
+                             f" {best[1] * 100:.0f}%·"
+                             f"{conf_cn[inference.confidence_of(best[1])]}")
+            pat = pats.get(other)
+            if pat is not None:
+                parts.append(f"{pat['pattern']} {pat['prob'] * 100:.0f}%")
+            if not parts:
+                parts.append("剩牌较多，暂难推测" if n > inference._PATTERN_MAX_HAND
+                             else "暂无显著推测")
+            rows.append({"pid": other, "label": label, "text": " ".join(parts)})
+        return rows
+
+
+# ---------------------------------------------------------------- 培训快照
+def _public_view(game) -> dict:
+    """公开信息视图（培训快照 B.2 public 字段）。
+
+    注意：与 decision.py 的 public 序列化**格式相似但生成路径独立**
+    （任务书 B.4.3）——本模块不 import decision/ai，仅读 game 公开字段。
+    """
+    lp = None
+    if game.last_play is not None:
+        owner, combo = game.last_play
+        lp = {"owner": owner, "type": combo.type.value, "rank": combo.rank,
+              "size": len(combo.cards), "eids": sorted(c.eid for c in combo.cards)}
+    return {
+        "played_eids": [c.eid for c in game.played_cards],
+        "hand_counts": {str(p): game.hand_count(p) for p in range(4)},
+        "last_play": lp,
+        "finish_order": list(game.finish_order),
+        "levels": {str(k): v for k, v in game.levels.items()},
+        "playing_team": game.playing_team,
+    }
+
+
+def build_training_snapshot(game, pid: int = 0, seed: int = 0, trick: int = 0,
+                            advice: Optional[dict] = None) -> Dict[str, Any]:
+    """构建受训玩家视角培训快照（任务书附录 B.2，阶段二骨架）。
+
+    口径：纯公开信息 + 该玩家手牌，由 Observer 现算现显（无状态）；
+    严禁引用 ai/registry/decision/plan_b/strategy（tests/test_decision.py 以
+    源码 import 检查 + 字段白名单固化）。``advice`` 由调用方以教学面板数据源
+    （advisor.advise 结果）传入，本模块不依赖 advisor。
+
+    bomb_prediction / pattern_prediction 阶段四实装：调 inference 无状态
+    纯函数（双方各自以自己合法输入调用，杜绝状态共享）。概率/置信等级
+    含 evidence 可解释口径。seed/trick 由调用方提供（snapshot_id 定位键，
+    未知时为 0）。
+    """
+    obs = Observer(game, pid)
+    rows = obs.core_rows()
+    snap: Dict[str, Any] = {
+        "data_version": 1,
+        "snapshot_id": f"seed={seed}|r={game.round_number}|t={trick}",
+        "seed": seed, "round": game.round_number, "trick": trick, "pid": pid,
+        "my_hand": sorted(c.eid for c in game.hands.get(pid, [])),
+        "public": _public_view(game),
+        "memory": {
+            "unseen": {str(r): n for r, n in sorted(obs.unseen.items()) if n > 0},
+            "core": {"big_joker": rows[0][3], "small_joker": rows[1][3],
+                     "level": rows[2][3], "wild": rows[3][3]},
+        },
+        "bomb_prediction": inference.bomb_prediction(game, pid),
+        "pattern_prediction": inference.pattern_prediction(game, pid),
+        "threats": [],
+        "advice": advice,
+        "uncertainty": f"未见牌 {sum(obs.unseen.values())} 张，以下推断置信度有限",
+    }
+    # 威胁提示（公开信息：对手剩牌数）
+    for p in game.active_players():
+        if game.team_of(p) == game.team_of(pid):
+            continue
+        n = game.hand_count(p)
+        if n <= 2:
+            snap["threats"].append({"pid": p, "desc": f"剩{n}张，报牌状态"})
+        elif n <= 6:
+            snap["threats"].append({"pid": p, "desc": f"剩{n}张，临近出完"})
+    return snap

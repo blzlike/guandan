@@ -1,7 +1,7 @@
 [app]
 
 # 应用基本信息
-title = 顺溜掼蛋
+title = 顺溜掼蛋 联网版
 # 应用图标：源码根目录 logo.png（png 已在 include_exts 中随包打包）
 icon.filename = logo.png
 # 安卓加载画面（presplash）：presplash.png 为 2400x1080 横版图，
@@ -10,7 +10,7 @@ icon.filename = logo.png
 presplash.filename = presplash.png
 presplash.color = (0.13, 0.33, 0.16, 1)
 package.name = guandan
-version = 1.0
+version = 1.1
 package.domain = org.guandan
 author = guandan
 author.email = unknown@example.com
@@ -38,6 +38,8 @@ fullscreen = 1
 # 安卓构建参数
 android.api = 34
 android.minapi = 21
+# 好友联机（阶段四）组网权限：TCP 直连/UDP 房间发现（同一 WiFi 或热点）
+android.permissions = INTERNET,ACCESS_NETWORK_STATE,CHANGE_NETWORK_STATE
 # 仅 arm64-v8a（2019 后设备全覆盖；放弃 32 位 armeabi-v7a，
 # 编译时间减半且 APK 体积从 57MB 降至约 30MB）
 android.archs = arm64-v8a

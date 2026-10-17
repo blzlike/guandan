@@ -65,6 +65,10 @@ class GuandanGame:
         self.next_leader = 0
         self.log: List[str] = []
         self.played_cards: List[Card] = []   # 本局已打出的实体牌（记牌器数据源）
+        # 本局公开动作史 (pid, kind, combo, is_lead)：kind="play"/"pass"。
+        # 出牌带 pid 归属与领出标记（阶段四推理数据源，由公开对局逐事件重算，
+        # 无跨局状态；clone 同步拷贝，rebuild 重演自动重建）
+        self.round_history: List[Tuple[int, str, Optional[Combo], bool]] = []
         # 事件监听（Recorder/打分/观察者等共挂）：fn(game, event, data)
         self.listeners: List[Callable[[Any, str, dict], None]] = []
         self.start_match()
@@ -118,6 +122,7 @@ class GuandanGame:
         self.round_number += 1
         self.finish_order = []
         self.played_cards = []
+        self.round_history = []
         self.last_play = None
         self.trick_displays = {}
         self.passed_since = set()
@@ -238,6 +243,7 @@ class GuandanGame:
         if any(c is None for c in real):
             raise IllegalPlayError("出牌包含非当前手牌的实体牌")
         prev = self.last_play[1] if self.last_play else None
+        is_lead = self.last_play is None
         combo = can_play(real, prev, self.level)
         if combo is None:
             raise IllegalPlayError("非法出牌：牌型不成立或压不过当前牌")
@@ -250,6 +256,7 @@ class GuandanGame:
         self.trick_displays[pid] = {"action": "play", "combo": combo}
         self.passed_since = set()
         self.log.append(f"P{pid} 出 {combo.describe()}")
+        self.round_history.append((pid, "play", combo, is_lead))
         self._notify("play", pid=pid, eids=[c.eid for c in real], combo=combo)
         if not self.hands[pid]:
             self.finish_order.append(pid)
@@ -281,6 +288,7 @@ class GuandanGame:
         self.passed_since.add(pid)
         self.trick_displays[pid] = {"action": "pass", "combo": None}
         self.log.append(f"P{pid} 过牌")
+        self.round_history.append((pid, "pass", None, False))
         self._notify("pass", pid=pid)
         self._advance()
 
@@ -402,6 +410,7 @@ class GuandanGame:
         new.next_leader = self.next_leader
         new.log = list(self.log)
         new.played_cards = list(self.played_cards)
+        new.round_history = list(self.round_history)
         new.listeners = []
         if hasattr(self, "_round_head"):
             new._round_head = self._round_head

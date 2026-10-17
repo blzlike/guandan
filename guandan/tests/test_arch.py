@@ -2,8 +2,11 @@
 import json
 import os
 import random
+import re
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -66,7 +69,8 @@ def test_registry_equivalence_high_and_low():
 
 
 def test_registry_registered_ids():
-    assert ids() == ["classic_low", "classic_high", "pimc"]
+    assert ids() == ["classic_low", "classic_high", "pimc",
+                     "novice", "intermediate", "advanced"]
 
 
 # ---------------------------------------------------------------- clone
@@ -148,32 +152,56 @@ def test_recorder_rejects_midmatch_attach():
         pass
 
 
-# ---------------------------------------------------------------- 座位解析
+# ---------------------------------------------------------------- 全局牌力解析
 def test_resolve_seat_compat():
-    # 旧配置：无 seats 键 → 全局默认
+    # 三档直映（当前设置界面仅提供 novice/intermediate/advanced）
+    assert resolve_seat({"ai_strength": "novice"}, 1) == "novice"
+    assert resolve_seat({"ai_strength": "intermediate"}, 2) == "intermediate"
+    assert resolve_seat({"ai_strength": "advanced"}, 3) == "advanced"
+    # 旧档位兼容映射（low/high/pimc 已退出设置界面，底层保留）
     assert resolve_seat({"ai_strength": "high"}, 1) == "classic_high"
     assert resolve_seat({"ai_strength": "low"}, 3) == "classic_low"
-    # seats 覆盖优先，未覆盖座位回退全局
-    s = {"ai_strength": "high", "seats": {"1": "classic_low", "2": None}}
-    assert resolve_seat(s, 1) == "classic_low"
-    assert resolve_seat(s, 2) == "classic_high"   # None → 全局
-    assert resolve_seat(s, 3) == "classic_high"   # 缺失 → 全局
-    # 未知 sid / 非 dict seats → 回退全局
-    s2 = {"ai_strength": "low", "seats": {"1": "dmc"}}
-    assert resolve_seat(s2, 1) == "classic_low"
-    assert resolve_seat({"ai_strength": "high", "seats": "bad"}, 1) == "classic_high"
-    # 全局「夯」与座位覆盖 pimc（阶段五）
     assert resolve_seat({"ai_strength": "pimc"}, 1) == "pimc"
-    assert resolve_seat({"ai_strength": "high", "seats": {"1": "pimc"}}, 1) == "pimc"
+    # 座位覆盖已废除：seats 键一律忽略，全部跟随全局
+    s = {"ai_strength": "advanced", "seats": {"1": "classic_low", "2": None}}
+    assert resolve_seat(s, 1) == "advanced"
+    assert resolve_seat(s, 2) == "advanced"
+    assert resolve_seat(s, 3) == "advanced"
+    # 未知档位 → 回退默认 advanced
+    assert resolve_seat({"ai_strength": "dmc"}, 1) == "advanced"
+    assert resolve_seat({}, 1) == "advanced"
 
 
 def test_settings_json_seats_roundtrip(tmp_path):
-    """seats 写入/读回 JSON：None 存为 null，load 不丢键。"""
-    data = {"ai_strength": "high",
+    """seats 键已废除：resolve_seat 忽略之，旧 JSON 残留不影响全局档位。"""
+    data = {"ai_strength": "advanced",
             "seats": {"1": None, "2": "classic_low", "3": None}}
     p = tmp_path / "s.json"
     p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     loaded = json.loads(p.read_text(encoding="utf-8"))
-    assert loaded["seats"]["1"] is None
-    assert loaded["seats"]["2"] == "classic_low"
-    assert resolve_seat(loaded, 2) == "classic_low"
+    assert resolve_seat(loaded, 1) == "advanced"
+    assert resolve_seat(loaded, 2) == "advanced"   # 不再读 seats["2"]
+
+
+# ---------------------------------------------------------------- 信息隔离红线
+PKG = Path(__file__).resolve().parent.parent
+
+
+@pytest.mark.parametrize("mod", ["observer.py", "advisor.py"])
+def test_teaching_modules_import_isolation(mod):
+    """observer/advisor 严禁 import ai/registry/decision/plan_b/strategy
+    （含函数内惰性导入）。联机版沿用：教学模块只依赖自己手牌+公开信息。"""
+    src = (PKG / mod).read_text(encoding="utf-8")
+    hit = re.search(
+        r"^\s*(?:import|from)\s+(ai|registry|decision|plan_b|strategy)\b",
+        src, re.M)
+    assert hit is None, f"{mod} 违规导入: {hit.group(0) if hit else ''}"
+
+
+def test_inference_module_purity():
+    """inference 为 AI/培训共享纯函数层：不得反向 import 任何 AI 私有模块。"""
+    src = (PKG / "inference.py").read_text(encoding="utf-8")
+    hit = re.search(
+        r"^\s*(?:import|from)\s+(ai|registry|decision|plan_b|strategy|"
+        r"observer|advisor)\b", src, re.M)
+    assert hit is None, f"inference 违规导入: {hit.group(0) if hit else ''}"

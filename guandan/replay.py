@@ -134,6 +134,20 @@ def apply_action(game: GuandanGame, act: Dict[str, Any],
         raise ValueError(f"未知动作类型: {kind}")
 
 
+def apply_net_act(game: GuandanGame, act: Dict[str, Any]) -> None:
+    """联机动作套用（客户端镜像/主机代打统一入口，好友联机阶段三）。
+
+    与 apply_action 的差异：套用行牌类动作后清除贡牌/抗贡开局展示——
+    主机端由 UI 展示保留期后调 begin_round，客户端没有对应时机，改为在
+    收到本回合首个行牌动作时就地清除（begin_round 只清展示、不动逻辑）。
+    清除须在 apply_action **之后**：round 跳变时 _deal_round 会重设本局
+    展示，先清会被跳局覆盖，导致与主机端失步（抗贡横幅残留）。
+    """
+    apply_action(game, act)
+    if act["kind"] in ("play", "pass"):
+        game.begin_round()
+
+
 def rebuild(record: Dict[str, Any],
             attach_recorder: Optional[Recorder] = None,
             on_action: Optional[callable] = None,

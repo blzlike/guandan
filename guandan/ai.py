@@ -34,8 +34,11 @@ V1.2 战术特性（方案 A，``features`` 开关逐项经 bench_ai.py A/B 验�
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
+import inference
+import strategy
 from cards import Card, point_value
 from rules import (Combo, HandType, can_play, find_straight_flushes,
                    generate_legal_moves, split_wilds)
@@ -123,16 +126,20 @@ def probability_refine(moves, game, pid):  # 扩展钩子
 
 
 def endgame_search(moves: List[Combo], game, pid: int,
-                   memory: Optional[CardMemory]) -> List[Combo]:
+                   memory: Optional[CardMemory],
+                   threshold: Optional[int] = None) -> List[Combo]:
     """残局浅层搜索（enhanced 专用）。
 
     - 能一次出完：直接锁定该动作；
     - 主动出牌且处于关键时刻（对手即将出完，或己方剩牌≤4）：
       锁定「未见牌大概率压不住」的组合中张数最多者，抢回牌权连续甩牌。
       平时残局（5-8 张）不做锁定，保持基础评分的甩牌节奏。
+    ``threshold``：触发阈值（手牌剩余张数），None=经典默认 ``ENDGAME_HAND``，
+    0=禁用搜索（阶段六档位预算参数化）。
     """
     hc = game.hand_count(pid)
-    if memory is None or hc > ENDGAME_HAND:
+    eff = ENDGAME_HAND if threshold is None else threshold
+    if memory is None or hc > eff or eff <= 0:
         return moves
     done = [m for m in moves if len(m.cards) == hc]
     if done:
@@ -162,11 +169,9 @@ def _feed_teammate(moves: List[Combo], game, pid: int,
     hc = game.hand_count(pid)
     if any(len(m.cards) == hc for m in moves):
         return None                       # 本步能出完，优先获胜
-    mate = game.partner(pid)
-    if mate in game.finish_order or game.hand_count(mate) > 2:
+    # 送牌前置条件提炼为 strategy.feed_helps（阶段四，语义逐位一致）
+    if not strategy.feed_helps(game, pid):
         return None
-    if any(o != mate and game.hand_count(o) == 1 for o in game.active_players()):
-        return None                       # 有对手报单，小单张会送对手跑掉
     level = game.level
     bomb_ranks = ctx["bomb_ranks"]
     sf_eids = ctx["sf_eids"]
@@ -230,59 +235,153 @@ class AIProfile:
         self.dump = {"aggressive": 1.2, "balanced": 1.0, "conservative": 0.8}[name]
 
 
+# ---------------------------------------------------------------- 权重
+@dataclass
+class Weights:
+    """评分权重表（任务书附录 B.5：可配置，供 bench A/B 校准）。
+
+    阶段四新增两项系数，默认 0 → 经典档评分逐字节不变（test_arch 守护）；
+    阶段六随新 AI 档位启用并经 bench 校准后调整默认值。
+    """
+    risk: float = 0.0             # 未知牌被压风险系数（inference 估计 ×系数 → risk 分项）
+    team_feed_lead: float = 0.0   # 领出低单帮对家跑牌的协同系数（→ gain_team 分项）
+
+
+@dataclass(frozen=True)
+class Budget:
+    """档位预算（阶段六）：搜索深度与计算预算按档位参数化。
+
+    各字段缺省（None/0）= 经典默认值（``ENDGAME_HAND`` /
+    ``MAX_CANDIDATES`` / ``Weights()``），经典档不传 budget → 行为逐字节
+    不变（test_arch/test_ai 守护）。registry 阶段六新档位经 budget 传入：
+    - novice:       endgame_hand=0（残局搜索关闭）、候选上限 4；
+    - intermediate: 经典残局阈值、候选上限 6；
+    - advanced:     经典阈值 + gain_team 协同分项启用（team_feed_lead=1.0；
+      risk 经 bench A/B 证伪关闭——25/6/2 → 35.4%/46.3%/50.2% 单调劣化，
+      见 registry 注释与任务书附录 D 阶段六）。
+    """
+    endgame_hand: Optional[int] = None   # 残局搜索触发阈值（手牌数）；0=禁用
+    max_candidates: int = 0              # 快照候选上限；0=MAX_CANDIDATES
+    weights: Optional[Weights] = None    # 评分权重（None=Weights() 全 0）
+
+
 # ---------------------------------------------------------------- 评分
-def _score_move(game, pid: int, move: Combo, ctx: dict, profile: AIProfile) -> float:
+# 统一候选动作评分分项（任务书附录 B.5）：每个收益维度只归入一个 part，
+# 防止重复奖励；total = 各分项贡献之和（min 越小越优，负值=利好该动作）。
+# risk / gain_team 阶段四实装：经 Weights 系数启用（默认 0，经典行为不变），
+# 数据源为 inference 无状态概率推断（被压风险估计 / 领出送牌协同）。
+SCORE_PARTS = ("gain_self", "gain_team", "block", "tempo", "cost", "risk",
+               "endgame")
+
+
+def _beat_risk_estimate(game, pid: int, move: Combo, ctx: dict) -> float:
+    """候选动作被对手压住的估计概率 [0,1]（risk 分项数据源，阶段四启发式）。
+
+    - 单张：对手合计牌池含更高点牌的精确概率（inference.pool_contains_prob）；
+    - 对子：对手池内出现更高成对点的并集近似（各点事件按容斥上界求和）；
+    - 炸弹族：未见更大炸弹/王可压 → 二值 0.9/0.0；
+    - 其余复合牌型：保守常数 0.5。
+    仅当 Weights.risk > 0 时进入评分，默认关闭不影响经典行为。
+    """
+    mem = ctx["memory"]
+    if mem is None:
+        return 0.0
+    unseen = mem.unseen
+    total = sum(unseen.values())
+    opp_pool = sum(game.hand_count(o) for o in game.active_players()
+                   if game.team_of(o) != game.team_of(pid))
+    if opp_pool <= 0 or total <= 0:
+        return 0.0
+    t = move.type
+    if t is HandType.SINGLE:
+        return inference.pool_contains_prob(mem.singles_higher(move.rank),
+                                            opp_pool, total)
+    if t is HandType.PAIR:
+        p = 0.0
+        for r, n in unseen.items():
+            if n >= 2 and point_value(r, game.level) > move.rank:
+                p += inference.hypergeom_at_least(n, opp_pool, total, 2)
+        return min(1.0, p)
+    if move.is_bomb_family():
+        return 0.9 if mem.beat_possible(move) else 0.0
+    return 0.5
+
+
+def score_move_detail(game, pid: int, move: Combo, ctx: dict,
+                      profile: AIProfile) -> Tuple[float, Dict[str, float]]:
+    """``_score_move`` 的分项版：返回 ``(total, score_parts)``。
+
+    total 与旧 ``_score_move`` 逐位一致（同一表达式、同一求和序列）；
+    score_parts 按语义把各项归入 B.5 七分项（各分项之和与 total 仅差
+    浮点归组误差）。分项归集：
+    - gain_self  走牌/甩牌收益：甩点数、一次出完、主动多甩长组合；
+    - gain_team  队友协同：过牌让路（既有）+ 领出送牌（阶段四，Weights 启用）；
+    - block      压制敌方：能压则压、urgent_top 报牌压制、炸阻对手跑完；
+    - tempo      牌权与节奏：mem_lead 稳拿牌权（过牌让权记 tempo 代价）；
+    - cost       拆牌/炸弹/控制牌消耗：用炸保留、拆炸、拆同花顺、废逢人配；
+    - risk       未知牌被压风险（阶段四 inference 估计，Weights.risk 启用）；
+    - endgame    对最终结果影响：天王炸终结价值。
+    """
+    parts: Dict[str, float] = {k: 0.0 for k in SCORE_PARTS}
     score = 0.0
+
+    def add(part: str, v: float) -> None:
+        # 与旧实现 score += v 的求和序逐位一致（a-b 与 a+(-b) 在 IEEE 下等价）
+        nonlocal score
+        score = score + v
+        parts[part] = parts[part] + v
+
     level = game.level
     bomb_ranks = ctx["bomb_ranks"]
     sf_eids = ctx["sf_eids"]
     move_cards = move.cards
 
     # 基础：出牌点数越低越好（甩小牌）
-    score += sum(point_value(c.rank, level) for c in move_cards if not c.is_wild(level))
+    add("gain_self",
+        sum(point_value(c.rank, level) for c in move_cards if not c.is_wild(level)))
 
     # 一次性出完：极大奖励
     if len(move_cards) == game.hand_count(pid):
-        score -= 500
+        add("gain_self", -500)
 
     # 主动出牌时，优先多甩牌（长组合）
     if ctx["leading"]:
-        score -= len(move_cards) * 12 * profile.dump
+        add("gain_self", -(len(move_cards) * 12 * profile.dump))
 
     # 炸弹族：保留倾向
     if move.is_bomb_family():
-        score += 260 * profile.bomb_use
+        add("cost", 260 * profile.bomb_use)
         if ctx["opponent_threat"]:
-            score -= 200  # 对手即将出完，值得动用炸弹
+            add("block", -200)  # 对手即将出完，值得动用炸弹
         if move.type is HandType.ROCKET:
-            score -= 40  # 天王炸最果断，可优先用于终结
+            add("endgame", -40)  # 天王炸最果断，可优先用于终结
 
     # 拆炸弹惩罚：非炸弹却消耗炸弹点数的牌
     if not move.is_bomb_family():
         for c in move_cards:
             if not c.is_joker and c.rank in bomb_ranks:
-                score += 120
+                add("cost", 120)
 
     # 拆同花顺惩罚
     if move.type is not HandType.STRAIGHT_FLUSH:
         for c in move_cards:
             if c.eid in sf_eids:
-                score += 100
+                add("cost", 100)
 
     # 浪费逢人配惩罚（用于普通单/对/三）
     if move.type in (HandType.SINGLE, HandType.PAIR, HandType.TRIPLE):
         for c in move_cards:
             if c.is_wild(level):
-                score += 60
+                add("cost", 60)
 
     # 跟对手牌：能压则压，倾向小代价
     if not ctx["leading"] and ctx["beat_opponent"]:
-        score -= 30
+        add("block", -30)
         owner = ctx["owner"]
         # V1.2 urgent_top：出牌者为报牌对手（剩≤2 张），不压则其可能借牌权跑完
         if "urgent_top" in ctx["features"] and owner is not None \
                 and game.hand_count(owner) <= 2:
-            score -= 80
+            add("block", -80)
         # V1.2 mem_lead：压完大概率无人能反压（含队友，其反压即转回本队牌权）
         # → 稳拿牌权值得奖励。仅限非炸弹、不含级牌/王/逢人配的跟牌，
         #   避免大王/级牌提前挥霍（见文首历史教训）。
@@ -292,39 +391,99 @@ def _score_move(game, pid: int, move: Combo, ctx: dict, profile: AIProfile) -> f
             plain_pv = [point_value(c.rank, level) for c in move_cards
                         if not c.is_wild(level)]
             if plain_pv and max(plain_pv) < 15 and not mem.beat_possible(move):
-                score -= 40
+                add("tempo", -40)
 
-    return score
+    # 阶段四 inference 实装：risk / gain_team 团队送牌（默认系数 0 →
+    # 本块整体短路，经典档评分逐字节不变，阶段六经 bench 校准后启用）
+    weights = ctx.get("weights")
+    if weights is not None and (weights.risk or weights.team_feed_lead):
+        if weights.team_feed_lead and ctx["leading"] and strategy.feed_helps(game, pid):
+            # 领出低单（不含级牌/王/逢人配）给对家报牌者留压牌机会
+            plain_pv = [point_value(c.rank, level) for c in move_cards
+                        if not c.is_wild(level)]
+            if move.type is HandType.SINGLE and plain_pv \
+                    and max(plain_pv) < 15:
+                add("gain_team", -30.0 * weights.team_feed_lead)
+        if weights.risk and ctx["memory"] is not None:
+            add("risk", weights.risk * _beat_risk_estimate(game, pid, move, ctx))
+
+    return score, parts
+
+
+def _score_move(game, pid: int, move: Combo, ctx: dict, profile: AIProfile) -> float:
+    """旧签名兼容包装：返回总分（分项见 ``score_move_detail``）。"""
+    return score_move_detail(game, pid, move, ctx, profile)[0]
+
+
+def _pass_score_detail(game, pid: int, ctx: dict,
+                       profile: AIProfile) -> Tuple[float, Dict[str, float]]:
+    """过牌候选评分（分项版）：让权/让路的代价归入对应分项。"""
+    parts: Dict[str, float] = {k: 0.0 for k in SCORE_PARTS}
+    if ctx["leading"]:
+        return float("inf"), parts      # 主动出牌不可过
+    if ctx["beat_teammate"]:
+        v = -50 * profile.dump          # 队友持权，让路=协同收益
+        parts["gain_team"] = v
+        return v, parts
+    parts["tempo"] = 55.0               # 跟对手不压：让出本轮牌权/节奏
+    return 55.0, parts
 
 
 def _pass_score(game, pid: int, ctx: dict, profile: AIProfile) -> float:
-    if ctx["leading"]:
-        return float("inf")  # 主动出牌不可过
-    # 队友当前持牌权：默认让队友过，除非我们能借此出完
-    if ctx["beat_teammate"]:
-        return -50 * profile.dump  # 很低，倾向过牌
-    # 跟对手：中等，倾向用小牌压制
-    return 55
+    """旧签名兼容包装：返回过牌总分。"""
+    return _pass_score_detail(game, pid, ctx, profile)[0]
 
 
 # ---------------------------------------------------------------- 决策
-def choose_action(game, pid: int,
-                  profile: Optional[AIProfile] = None,
-                  enhanced: bool = False,
-                  features: Optional[frozenset] = None
-                  ) -> Tuple[str, Optional[List[Card]]]:
-    """返回 ('play', cards) 或 ('pass', None)。
+MAX_CANDIDATES = 8     # 快照存储的主要候选上限（按总分升序裁剪，必含最终动作）
 
-    ``enhanced=True`` 时启用记牌器与残局搜索（对应设置页「AI 牌力：高」）；
-    默认 False 保持 V1.0 基础策略行为不变。
-    ``features`` 为 V1.2 特性开关集合（mem_lead/urgent_top/feed，见模块头），
-    None=全关（行为与 V1.1 完全一致）；bench_ai.py 按队切换做 A/B。
+
+def _candidate_entry(kind: str, move: Optional[Combo], total: float,
+                     parts: Dict[str, float], selected: bool) -> dict:
+    """候选动作 → 快照条目（B.1 candidates 键位）。"""
+    if kind == "pass":
+        return {"kind": "pass", "type": None, "rank": None, "eids": [],
+                "score_total": total, "score_parts": dict(parts),
+                "selected": selected}
+    return {"kind": "play", "type": move.type.value, "rank": move.rank,
+            "eids": sorted(c.eid for c in move.cards),
+            "score_total": total, "score_parts": dict(parts),
+            "selected": selected}
+
+
+def choose_action_detail(game, pid: int,
+                         profile: Optional[AIProfile] = None,
+                         enhanced: bool = False,
+                         features: Optional[frozenset] = None,
+                         weights: Optional[Weights] = None,
+                         budget: Optional[Budget] = None
+                         ) -> Tuple[str, Optional[List[Card]], dict]:
+    """``choose_action`` 的明细版：额外返回候选动作评分明细。
+
+    返回 ``(kind, cards, detail)``，前两项与 ``choose_action`` 逐位一致
+    （决策路径完全同构，test_arch 等价性回归守护）。detail：
+    - ``candidates``：主要候选（含过牌，若有），按 score_total 升序排列
+      （并列按评估序，过牌居先——与主循环「严格小于取胜」的并列语义
+      一致），至多 ``MAX_CANDIDATES`` 项且必含最终动作；每项含分项评分
+      score_parts 与 selected 标记；
+    - ``n_candidates``：实际参与评分的候选总数（含合法过牌）；
+    - ``cost``：搜索深度与计算预算（``search_depth``=残局搜索触发阈值，
+      未启用 enhanced 时为 0；``n_rollouts``=PIMC 推演数，经典引擎恒 0）。
+    送牌意图层触发时仅评估送牌动作本身（与 choose_action 提前返回一致，
+    该动作为硬覆盖选择，分项仅供参考）。
+    ``weights`` 为阶段四权重表；``budget`` 为阶段六档位预算（endgame_hand/
+    max_candidates/weights），两者同给时 budget.weights 仅在 weights 为
+    None 时生效；budget 缺省 → 全部经典默认，行为逐字节不变。
     """
     profile = profile or AIProfile("balanced")
     level = game.level
     prev = game.last_play[1] if game.last_play else None
     owner = game.last_play[0] if game.last_play else None
     feats = features if features is not None else frozenset()
+    end_hand = ENDGAME_HAND if budget is None or budget.endgame_hand is None \
+        else budget.endgame_hand
+    eff_weights = weights if weights is not None else \
+        (budget.weights if budget is not None else None)
 
     mem = CardMemory(game, pid) if (enhanced or "mem_lead" in feats) else None
     ctx = {
@@ -341,25 +500,76 @@ def choose_action(game, pid: int,
         "memory": mem,
         "owner": owner,
         "features": feats,
+        "weights": eff_weights if eff_weights is not None else Weights(),
     }
 
     moves = generate_legal_moves(game.hands[pid], prev, level)
     moves = probability_refine(moves, game, pid)
     # 残局锁定仅随 enhanced 启用，避免 mem_lead 单开时混入残局行为干扰 A/B 归因
-    moves = endgame_search(moves, game, pid, mem if enhanced else None)
+    moves = endgame_search(moves, game, pid, mem if enhanced else None,
+                           threshold=end_hand)
 
     feed = _feed_teammate(moves, game, pid, ctx)
     if feed is not None:
-        return ("play", list(feed.cards))
+        total, parts = score_move_detail(game, pid, feed, ctx, profile)
+        entry = _candidate_entry("play", feed, total, parts, True)
+        return ("play", list(feed.cards),
+                {"candidates": [entry], "n_candidates": 1,
+                 "cost": {"search_depth": end_hand if enhanced else 0,
+                          "n_rollouts": 0}})
 
-    best_action = ("pass", None)
-    best_score = _pass_score(game, pid, ctx, profile)
-    for m in moves:
-        s = _score_move(game, pid, m, ctx, profile)
+    # 评估序：过牌为在位者（并列时取胜，与 choose_action 初值语义一致），
+    # 其后按 generate_legal_moves 顺序逐个评分
+    cands: List[tuple] = []          # (评估序, kind, move, total, parts)
+    p_total, p_parts = _pass_score_detail(game, pid, ctx, profile)
+    if p_total != float("inf"):      # 主动出牌不可过，过牌非候选
+        cands.append((0, "pass", None, p_total, p_parts))
+        best_score = p_total
+    else:
+        best_score = float("inf")
+    best_seq = 0
+    for i, m in enumerate(moves):
+        s, parts = score_move_detail(game, pid, m, ctx, profile)
+        cands.append((i + 1, "play", m, s, parts))
         if s < best_score:
             best_score = s
-            best_action = ("play", list(m.cards))
-    return best_action
+            best_seq = i + 1
+    best_kind, best_cards = ("pass", None) if best_seq == 0 else \
+        ("play", list(moves[best_seq - 1].cards))
+
+    max_c = MAX_CANDIDATES if budget is None or budget.max_candidates <= 0 \
+        else budget.max_candidates
+    ranked = sorted(cands, key=lambda t: (t[3], t[0]))[:max_c]
+    entries = [_candidate_entry(kind, m, total, parts, seq == best_seq)
+               for seq, kind, m, total, parts in ranked]
+    return (best_kind, best_cards,
+            {"candidates": entries, "n_candidates": len(cands),
+             "cost": {"search_depth": end_hand if enhanced else 0,
+                      "n_rollouts": 0}})
+
+
+def choose_action(game, pid: int,
+                  profile: Optional[AIProfile] = None,
+                  enhanced: bool = False,
+                  features: Optional[frozenset] = None,
+                  weights: Optional[Weights] = None,
+                  budget: Optional[Budget] = None
+                  ) -> Tuple[str, Optional[List[Card]]]:
+    """返回 ('play', cards) 或 ('pass', None)。
+
+    ``enhanced=True`` 时启用记牌器与残局搜索（对应设置页「AI 牌力：高」）；
+    默认 False 保持 V1.0 基础策略行为不变。
+    ``features`` 为 V1.2 特性开关集合（mem_lead/urgent_top/feed，见模块头），
+    None=全关（行为与 V1.1 完全一致）；bench_ai.py 按队切换做 A/B。
+    ``weights`` 为阶段四评分权重表（默认 None → 经典行为逐字节不变）。
+    ``budget`` 为阶段六档位预算（endgame_hand/max_candidates/weights），
+    None=经典默认。候选分项明细见 ``choose_action_detail``
+    （决策路径同构，行为逐位一致）。
+    """
+    kind, cards, _ = choose_action_detail(game, pid, profile,
+                                          enhanced=enhanced, features=features,
+                                          weights=weights, budget=budget)
+    return kind, cards
 
 
 def explain_choice(game, pid: int, kind: str,

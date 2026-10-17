@@ -2,12 +2,12 @@
 
 所有 AI 牌力方案经此统一接入：``choose(game, pid, profile, sid)``。
 首批注册 classic_low / classic_high，与直接调用 ``ai.choose_action``
-逐字节等价（tests/test_arch.py 回归）。后续 pimc（夯档，阶段五）、
-dmc（自博弈模型，远期）仅注册不实现。
+逐字节等价（tests/test_arch.py 回归）。阶段五注册 pimc（夯档）；
+阶段六注册分级档 novice / intermediate / advanced（经典档保留不动）。
 
-座位解析：settings["seats"] 为 {str(pid): sid 或 None}，缺失 / None /
-未知 sid 一律回退全局默认（settings["ai_strength"]："high"→classic_high，
-否则 classic_low）。旧 settings.json 无 seats 键天然兼容。
+档位解析：settings["ai_strength"] → sid（novice/intermediate/advanced
+三档；low/high/pimc 为旧档位兼容映射）。座位策略覆盖已废除，全部
+AI 座位跟随全局档位；settings["seats"] 键不再读取（保存时清除）。
 """
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ from ai import AIProfile
 
 # choose(game, pid, profile, **opts) -> ("play", cards) | ("pass", None)
 ChooseFn = Callable[..., Tuple[str, Optional[list]]]
+# choose_detail(...) -> (kind, cards, detail|None)；detail=候选评分明细（ai 侧）
+ChooseDetailFn = Callable[..., Tuple[str, Optional[list], Optional[dict]]]
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,7 @@ class StrategySpec:
     name: str
     desc: str
     choose: ChooseFn
+    choose_detail: Optional[ChooseDetailFn] = None   # 未实现时 choose_detail 回退
 
 
 _REGISTRY: Dict[str, StrategySpec] = {}
@@ -56,16 +59,37 @@ def choose(game, pid: int, profile: Optional[AIProfile], sid: str,
     return spec.choose(game, pid, profile, **opts)
 
 
-_GLOBAL_STRENGTH = {"high": "classic_high", "pimc": "pimc"}
+def choose_detail(game, pid: int, profile: Optional[AIProfile], sid: str,
+                  **opts) -> Tuple[str, Optional[list], Optional[dict]]:
+    """choose 的明细版：附带候选动作评分明细（决策只算一次）。
+
+    classic 档返回 ``ai.choose_action_detail`` 的 detail（candidates/
+    n_candidates）；未实现明细的策略（pimc）返回 detail=None，快照候选
+    留空（阶段四统一收益口径后补齐）。
+    """
+    spec = _REGISTRY.get(sid)
+    if spec is None:
+        raise KeyError(f"未注册策略: {sid}")
+    if spec.choose_detail is not None:
+        return spec.choose_detail(game, pid, profile, **opts)
+    kind, cards = spec.choose(game, pid, profile, **opts)
+    return kind, cards, None
+
+
+_GLOBAL_STRENGTH = {"novice": "novice", "intermediate": "intermediate",
+                    "advanced": "advanced",
+                    # 旧档位兼容映射（low/high/pimc 已退出设置界面，
+                    # classic_low/classic_high/pimc 保留注册供 bench/测试调用）
+                    "low": "classic_low", "high": "classic_high",
+                    "pimc": "pimc"}
 
 
 def resolve_seat(settings: dict, pid: int) -> str:
-    """座位策略解析：每座覆盖优先，缺失/None/未知回退全局默认。"""
-    seats = settings.get("seats") or {}
-    sid = seats.get(str(pid)) if isinstance(seats, dict) else None
-    if sid in _REGISTRY:
-        return sid
-    return _GLOBAL_STRENGTH.get(settings.get("ai_strength"), "classic_low")
+    """全局牌力解析：按 settings["ai_strength"] 返回 sid（pid 仅保留形参）。
+
+    座位策略覆盖已废除——全部 AI 座位跟随全局档位；未知值回退 advanced
+    （当前默认档）。"""
+    return _GLOBAL_STRENGTH.get(settings.get("ai_strength"), "advanced")
 
 
 # ---------------------------------------------------------------- 经典选手
@@ -73,14 +97,26 @@ def _classic_low(game, pid, profile, **opts):
     return ai.choose_action(game, pid, profile, enhanced=False, features=None)
 
 
+def _classic_low_detail(game, pid, profile, **opts):
+    return ai.choose_action_detail(game, pid, profile,
+                                   enhanced=False, features=None)
+
+
 def _classic_high(game, pid, profile, **opts):
     return ai.choose_action(game, pid, profile,
                             enhanced=True, features=ai.HIGH_FEATURES)
 
 
-register(StrategySpec("classic_low", "经典·低", "V1.0 基础策略", _classic_low))
+def _classic_high_detail(game, pid, profile, **opts):
+    return ai.choose_action_detail(game, pid, profile,
+                                   enhanced=True, features=ai.HIGH_FEATURES)
+
+
+register(StrategySpec("classic_low", "经典·低", "V1.0 基础策略",
+                      _classic_low, _classic_low_detail))
 register(StrategySpec("classic_high", "经典·高",
-                      "记牌器+残局搜索+已验证特性", _classic_high))
+                      "记牌器+残局搜索+已验证特性",
+                      _classic_high, _classic_high_detail))
 
 # ---------------------------------------------------------------- 夯档 PIMC（阶段五）
 def _pimc(game, pid, profile, **opts):
@@ -90,6 +126,49 @@ def _pimc(game, pid, profile, **opts):
 
 register(StrategySpec("pimc", "夯", "关键时刻 PIMC 采样推演，其余沿用经典·高",
                       _pimc))
+
+# ---------------------------------------------------------------- 分级档（阶段六）
+# 梯度设计（经典档 classic_low/classic_high 保留不动，行为逐字节不变）：
+#   novice       基础引擎（≈经典·低）：无记牌器/无残局搜索/无特性，算力最省；
+#   intermediate 记牌器 + urgent_top（历史 A/B 唯一单开显著正收益特性）；
+#   advanced     全特性 + gain_team 领出协同分项 + 快照候选 8（残局阈值保持
+#                经典 8；risk 分项经 bench A/B 证伪关闭，见下）。
+# bench A/B 校准（2026-10-17，300 场同牌口径 vs intermediate，seed 2000..2299）：
+#   risk=25 → 轮胜 35.4%（双下率 38%、用炸 -30%，过度保守全面劣化）；
+#   risk=6  → 46.3%；risk=2 → 50.2%；risk=0 → 51.6%（单调，risk 关闭）；
+#   endgame_hand=10（risk=0）→ 50.7%，无增益，维持经典 8。
+# 最终梯度见任务书附录 D 阶段六（intermediate 55.3% ≫ novice；
+# advanced ≈ 51.6% 优于 intermediate，risk 分项保留代码、系数 0）。
+_BUDGET_NOVICE = ai.Budget(endgame_hand=0, max_candidates=4)
+_BUDGET_INTERMEDIATE = ai.Budget(max_candidates=6)
+_BUDGET_ADVANCED = ai.Budget(endgame_hand=8, max_candidates=8,
+                             weights=ai.Weights(risk=0.0, team_feed_lead=1.0))
+
+
+def _tier(enhanced: bool, feats: frozenset, budget: ai.Budget):
+    """分级档工厂：固定 enhanced/特性集/预算的 choose/choose_detail 对。"""
+    def choose(game, pid, profile, **opts):
+        return ai.choose_action(game, pid, profile, enhanced=enhanced,
+                                features=feats, budget=budget)
+
+    def choose_detail(game, pid, profile, **opts):
+        return ai.choose_action_detail(game, pid, profile, enhanced=enhanced,
+                                       features=feats, budget=budget)
+    return choose, choose_detail
+
+
+_nov = _tier(False, frozenset(), _BUDGET_NOVICE)
+_inter = _tier(True, frozenset({ai.FEATURE_URGENT_TOP}), _BUDGET_INTERMEDIATE)
+_adv = _tier(True, ai.HIGH_FEATURES, _BUDGET_ADVANCED)
+
+register(StrategySpec("novice", "初级", "基础规则引擎，轻量快速",
+                      _nov[0], _nov[1]))
+register(StrategySpec("intermediate", "中级",
+                      "记牌器+报牌压制（urgent_top）",
+                      _inter[0], _inter[1]))
+register(StrategySpec("advanced", "高级",
+                      "全特性+推理评分（风险/协同）+深残局搜索",
+                      _adv[0], _adv[1]))
 
 # 占位（远期注册实现）：
 # register(StrategySpec("dmc", "模型", "Deep Monte-Carlo 自博弈策略", ...))

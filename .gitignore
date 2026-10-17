@@ -6,3 +6,7 @@ bin/
 .idea/
 .vscode/
 _shot*.png
+# 运行时数据：决策快照/复盘记录/基准报告（可再生成，不入库）
+guandan/decisions/
+guandan/replays/
+guandan/bench_reports/
