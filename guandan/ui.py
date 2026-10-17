@@ -1782,6 +1782,7 @@ class TableScreen(Screen):
         if s is None:
             return
         me = s.my_seat or 0
+        old_mgr = self.mgr           # 旧整理状态：重建时尽量保留分组
         # 构造即完成首局发牌（game.__init__ 自动 start_match）：seed→发牌
         # 确定性成立，赛末分发的复盘记录可在任意一端 rebuild 重演
         g = GuandanGame(rng=random.Random(seed))
@@ -1803,6 +1804,15 @@ class TableScreen(Screen):
         self.mgr.clear_groups()
         self.mgr.clear_selection()
         self.mgr.sync()
+        # resync/重连重建：若整理分组所用牌均仍在当前手牌中，则保留分组
+        #（eid 全局唯一且发牌确定性，同座位手牌 eid 稳定），避免重连时
+        # 已整理的炸弹/组牌被打散回普通列
+        if (isinstance(old_mgr, HandManager) and old_mgr.pid == me
+                and old_mgr.groups):
+            real = {c.eid for c in self.mgr.real_hand}
+            if all(e in real for grp in old_mgr.groups for e in grp):
+                self.mgr.groups = [list(grp) for grp in old_mgr.groups]
+                self.mgr.group_meta = [dict(m) for m in old_mgr.group_meta]
         self._last_round = -1
         self._alerted = set()
         self._scores = None
@@ -1825,6 +1835,8 @@ class TableScreen(Screen):
         g = self.game
         s = self.app.net_session
         guest = s is not None and not s.is_host
+        if guest and not s.ingest_act(act):
+            return                     # 重复帧（resync 已覆盖）或真断档已转 resync
         pre = None
         try:
             if act.get("kind") == "pass":

@@ -74,6 +74,8 @@ def _drain_guest(client, gg, state):
         except queue.Empty:
             return
         if kind == "act":
+            if not client.ingest_act(ev):
+                continue              # 重复帧/真断档：与 UI 闸门同口径
             apply_net_act(gg, ev)
             client.mark_applied()
         elif kind == "resync":
@@ -308,6 +310,81 @@ def test_disconnect_takeover_and_rejoin():
     assert _snap(g3) == _snap(hg)
     host.close()
     client2.close()
+
+
+def test_act_burst_no_false_resync():
+    """连发动作积压（UI 泵滞后）不得误触发 resync：按序入队套用即追平。
+
+    回归：客人出牌回执与 AI 连发动作在同一泵取批次到达时，旧实现按
+    applied+1 硬比对误判断档 → 假 resync → 客人端 net_setup 重建清空
+    整理手牌（「整理后被自动恢复」根因）。
+    """
+    host, client = _make_pair()
+    host.start_game(levels=[2, 2], seed=19)
+    assert _pump_until(host, client, lambda: client.started)
+    hg, gg = _build_games(host, client, 19)
+    state = {"rejected": [], "takeover": [], "started": [], "resync": None}
+    _host_ai_step(hg)
+    _host_ai_step(hg)                     # 连发两帧（seq=1、seq=2）
+    assert len(host.actions) >= 2
+    # 泵到两帧都入队（期间不 drain——模拟 UI 泵滞后）
+    deadline = time.monotonic() + 2.0
+    while time.monotonic() < deadline:
+        client.pump()
+        queued = [k for k, _p, _e in client.events.queue]
+        if queued.count("act") >= 2:
+            break
+        time.sleep(0.01)
+    queued = [k for k, _p, _e in client.events.queue]
+    assert queued.count("act") >= 2, f"两帧未入队: {queued}"
+    assert not client._resync_pending, "积压帧被误判断档触发 resync"
+    assert "resync" not in queued
+    _drain_guest(client, gg, state)       # UI 按序套用
+    assert state["resync"] is None
+    assert client.applied_seq == len(host.actions)
+    assert _snap(hg) == _snap(gg)
+    host.close()
+    client.close()
+
+
+def test_true_gap_resync_via_ingest_gate():
+    """真断档（已入队动作帧丢失）：套用闸门自动 resync 全量重演自愈。"""
+    host, client = _make_pair()
+    host.start_game(levels=[2, 2], seed=11)
+    assert _pump_until(host, client, lambda: client.started)
+    hg, gg = _build_games(host, client, 11)
+    state = {"rejected": [], "takeover": [], "started": [], "resync": None}
+    _host_ai_step(hg)
+    _await_sync(host, client, gg, state)  # seq=1 已套用（applied=1）
+    _host_ai_step(hg)                     # seq=2 广播，只泵不入队消费
+    _pump_until(host, client, lambda: False, timeout=0.3)  # 等帧送达事件队列
+    # 从事件队列丢弃一条 act（模拟真丢帧：帧已消费但未套用）
+    dropped = False
+    kept = []
+    while True:
+        try:
+            item = client.events.get_nowait()
+        except queue.Empty:
+            break
+        if not dropped and item[0] == "act":
+            dropped = True
+            continue
+        kept.append(item)
+    for item in kept:
+        client.events.put(item)
+    assert dropped, "未找到可丢弃的 act 事件"
+    _host_ai_step(hg)                     # seq=3：套用闸门应发现断档
+    assert _pump_until(host, client, lambda: state["resync"] is not None,
+                       drain=lambda: _drain_guest(client, gg, state))
+    payload = state["resync"]
+    g3 = GuandanGame(rng=random.Random(payload["seed"]))
+    g3.levels = {0: payload["levels"][0], 1: payload["levels"][1]}
+    for act in payload["actions"]:
+        apply_net_act(g3, act)
+    assert _snap(g3) == _snap(hg)
+    assert client.applied_seq == len(host.actions)
+    host.close()
+    client.close()
 
 
 def test_next_match_broadcasts_new_start():

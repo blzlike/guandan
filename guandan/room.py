@@ -631,6 +631,26 @@ class RoomClient:
         """UI 套用一条 act 后调用（seq 推进；漏调会触发 resync 自愈）。"""
         self._applied += 1
 
+    def ingest_act(self, act: dict) -> bool:
+        """UI 套用前过闸：True=可套用；False=跳过（重复帧或已触发 resync）。
+
+        - seq <= applied：resync 重演已覆盖的重复帧，跳过（防止二次套用
+          抛 GameError 引发 resync 风暴）；
+        - seq > applied+1：真断档（该帧永远不会再来的漂移场景），自动
+          request_resync 全量重演；网络线程的假断档（泵滞后）已在
+          _on_message 层放行入队，不会走到这里。
+        成功套用后 UI 仍需调用 mark_applied()。
+        """
+        seq = act.get("seq")
+        if not isinstance(seq, int):
+            return True
+        if seq <= self._applied:
+            return False
+        if seq > self._applied + 1:
+            self.request_resync()
+            return False
+        return True
+
     def seats_snapshot(self) -> list:
         return _seats_view(self._seats) if self._seats else []
 
@@ -731,12 +751,12 @@ class RoomClient:
                               "levels": payload.get("levels")}))
         elif t == "act":
             seq = payload.get("seq")
-            if seq == self._applied + 1:
+            if isinstance(seq, int) and seq > self._applied:
+                # 超前帧（seq > applied+1）也直接入队：TCP 保序下这只说明
+                # UI 还没套用前几帧（泵滞后/动作连发），按序套用即可追平；
+                # 在此误判断档会触发假 resync，导致客人端重建清空整理手牌
                 self.events.put(("act", None, payload))
-            elif isinstance(seq, int) and seq > self._applied + 1:
-                # seq 断档（重连/漏收）：丢弃并全量重同步
-                self.request_resync()
-            # seq <= applied：重复帧，忽略
+            # seq <= applied：重复帧（resync 重演已覆盖），静默忽略
         elif t == "resync":
             self.resync = payload
             self._applied = len(payload.get("actions") or [])
