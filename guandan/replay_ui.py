@@ -8,9 +8,11 @@
 回放页四列（手牌 2/5 | 出牌 1/5 | 理由 3/10 | 按钮 1/10）× 四行（我/下家/
 对家/上家），浅色分隔线；本页按钮统一宽:高=3:2。手牌区左缘显示头像+姓名+
 剩牌数（样式同正常牌桌上家，头像贴屏幕边 0.2 倍头像宽，手牌底部对齐紧贴行
-下沿、左贴头像），手牌按 AI 理牌方式分组（炸弹/同花顺/顺子/连对优先成组，
-其余按点数，组间牌力降序，5 张到顶反算牌高）；出牌区每人 2 槽位显示本轮
-最近 2 次行牌（牌高 90% 槽高），编号为轮内 play/pass 顺序号（每轮从 1 起，
+下沿、左贴头像），手牌按未整理手牌形式放置（同点数一列叠放，列自左向右
+点值降序，5 张到顶反算牌高）；出牌区每人 2 槽位显示本轮
+最近 2 次行牌（牌高 90% 槽高；牌序按 rules.display_order 统一规范：序列类
+点数升序、配牌占顶替位，三带二三张在前，同点黑红梅方，与正常牌桌一致），
+编号为轮内 play/pass 顺序号（每轮从 1 起，
 过牌显示「不出」；下一轮/上一轮按下即切轮清空重新编号）；理由区左右紧贴
 分隔线（各留 0.5 字宽）自动换行，写满槽位后以省略号结尾，每槽位右端「对
 比」按钮（宽=槽位高、3:2）打开候选分项面板（AI 动作理由由正常牌局
@@ -41,7 +43,7 @@ from cards import RANK_LABELS, build_deck, point_value, sort_key
 from decision import DecisionStore, format_snapshot_summary
 from replay import ReplaySession, load_json
 from review import CATEGORIES, VERDICTS, VERDICT_LABELS, ReviewStore
-from rules import RuleConfig
+from rules import Combo, HandType, display_order
 
 # 可写目录（与 ui.py settings.json 同套 frozen 规则：exe 旁 / 源码目录旁）
 if getattr(sys, "frozen", False):
@@ -57,6 +59,40 @@ _CARD_BY_EID = {c.eid: c for c in build_deck()}   # eid 确定性分配，展示
 def _one_line(text: str) -> str:
     """多行文本 → 单行（行间以「｜」分隔；理由区按槽宽自动换行展示）。"""
     return "｜".join(ln.strip() for ln in text.splitlines() if ln.strip())
+
+
+def _hand_columns(cards, level: int):
+    """未整理手牌形式分列（同正常牌桌 column_layout 口径）：同点数一列
+    叠放（列内自下而上黑桃/红桃/梅花/方块），列自左向右按比较点值降序
+    （大王→小王→级牌→A→…→2）。"""
+    cols: Dict[int, list] = {}
+    for c in cards:
+        cols.setdefault(c.rank, []).append(c)
+    ordered = sorted(cols.keys(), key=lambda r: -point_value(r, level))
+    return [sorted(cols[r], key=lambda c: sort_key(c, level)) for r in ordered]
+
+
+def _action_combo(a: Dict[str, Any]):
+    """由存档 play 动作重建出牌解释（新档含 ctype/crank/csubs 字段，
+    供 display_order 精确放置红心配）；旧档无该字段返回 None，
+    display_order 改按 classify 推定。"""
+    ct = a.get("ctype")
+    if not ct:
+        return None
+    try:
+        t = HandType(ct)
+    except ValueError:
+        return None
+    cards = tuple(_CARD_BY_EID[e] for e in a["eids"] if e in _CARD_BY_EID)
+    subs = tuple((int(e), int(r)) for e, r in (a.get("csubs") or []))
+    return Combo(t, int(a.get("crank", 0)), cards, subs)
+
+
+def _btn_font(text: str, w: float, h: float) -> int:
+    """FlatButton 文字字号（与 ui.FlatButton._place 公式一致），供普通文字
+    对齐按钮字号：清单页=「打开」、回放/快照页=「下一步」（2026-10-19 规格）。"""
+    est = sum(1.0 if ord(ch) > 0x2E80 else 0.55 for ch in text) or 1.0
+    return max(9, int(min(h * 0.60, w * 0.94 / est)))
 
 
 def _fit_reason_text(text: str, tw: int, slot_h: int, size: int) -> str:
@@ -286,25 +322,30 @@ class ReplayScreen(Screen):
         self._rebuild()
 
     def _build_snapshot_panel(self, snap: dict):
-        """候选对比覆盖面板：决策信息 + 候选分项表 + 关闭按钮。"""
+        """候选对比覆盖面板：决策信息 + 候选分项表 + 关闭按钮。
+
+        全部文字与回放页「下一步」按钮同字号，校核/关闭按钮随字号增大
+        （2026-10-19 用户规格）；面板放大至 0.86W×0.88H 容纳更大文字。
+        """
         from decision import format_candidates_table
         from ui import BLUE, FlatButton, Panel, _label
         W, H = Window.width, Window.height
         DIM = (0.10, 0.11, 0.13, 0.55)
         self.add_widget(Panel(pos=(0, 0), size=(W, H), color=DIM,
                               border=DIM, radius=0))
-        pw, ph = int(0.72 * W), int(0.78 * H)
+        pw, ph = int(0.86 * W), int(0.88 * H)
         px, py = (W - pw) // 2, (H - ph) // 2
         self.add_widget(Panel(pos=(px, py), size=(pw, ph),
                               color=(0.16, 0.17, 0.15, 0.98)))
-        fs = max(11, int(0.022 * H))
-        y = py + ph - int(0.035 * H)
+        fs = _btn_font("下一步", int(0.078 * H) * 1.5, int(0.078 * H))
+        lh = fs + 8                              # 文字行高（含行距）
+        y = py + ph - lh - 10
         fin = snap.get("final") or {}
         self.add_widget(_label(
             f"[b]决策快照[/b]  {snap.get('decision_id', '')}",
-            size=int(fs * 1.15), pos=(px + int(0.03 * pw), y),
-            widget_size=(int(0.7 * pw), int(0.04 * H)), halign="left"))
-        y -= int(0.038 * H)
+            size=fs, pos=(px + int(0.03 * pw), y),
+            widget_size=(int(0.7 * pw), lh), halign="left"))
+        y -= lh + 4
         cost = snap.get("cost") or {}
         self.add_widget(_label(
             f"座位{snap.get('pid')} · {snap.get('sid')}"
@@ -312,8 +353,8 @@ class ReplayScreen(Screen):
             f" · 候选{cost.get('n_candidates', 0)}个 · {cost.get('ms', 0)}ms",
             size=fs, color=(0.85, 0.85, 0.80, 1),
             pos=(px + int(0.03 * pw), y),
-            widget_size=(int(0.9 * pw), int(0.03 * H)), halign="left"))
-        y -= int(0.034 * H)
+            widget_size=(int(0.9 * pw), lh), halign="left"))
+        y -= lh
         st = fin.get("score_total")
         self.add_widget(_label(
             f"最终：{fin.get('kind') == 'play' and '出牌' or '过牌'}"
@@ -321,44 +362,59 @@ class ReplayScreen(Screen):
             f"　{fin.get('reason') or ''}",
             size=fs, color=(1.0, 0.92, 0.60, 1),
             pos=(px + int(0.03 * pw), y),
-            widget_size=(int(0.94 * pw), int(0.03 * H)), halign="left"))
-        y -= int(0.030 * H)
+            widget_size=(int(0.94 * pw), lh), halign="left"))
+        y -= lh
         # 分项表：候选 | 总分 | 走牌 协同 压制 牌权 成本 风险 终局
+        # 表头下附备注行说明各列含义（2026-10-19 用户要求）。备注字号按
+        # 最窄列宽自适应（保证每行至少容 2 字），窄屏自动缩小防溢出。
         rows = format_candidates_table(snap)
         col_fx = (0.03, 0.30, 0.42, 0.50, 0.58, 0.66, 0.74, 0.82, 0.90)
         col_w = [int(0.26 * pw), int(0.11 * pw)] + [int(0.075 * pw)] * 7
-        rh = int(0.032 * H)
+        NOTE = ("▶=实际选择", "越低\n越优", "出牌\n收益", "队友\n配合",
+                "压制\n对手", "节奏\n得失", "牌力\n消耗", "被压\n风险",
+                "终结\n影响")
+        nfs = min(fs, int(min(col_w) * 0.45))
+        nh = int(nfs * 2.3) + 4                  # 备注行高（容两行）
+        rh = fs + 10
+        bh = max(int(0.052 * H), int(fs * 1.7))  # 底部按钮随字号增大
+        bottom = py + int(0.012 * H) + bh + lh + 6
         for ri, row in enumerate(rows):
-            if y - rh < py + int(0.07 * H):
+            if y - (rh + (nh if ri == 0 else 0)) < bottom:
                 break
             sel = row[0].startswith("▶")
             color = (1.0, 0.90, 0.45, 1) if sel else \
                 ((0.75, 0.78, 0.72, 1) if ri == 0 else (0.95, 0.95, 0.90, 1))
             for ci, cell in enumerate(row):
                 self.add_widget(_label(
-                    cell, size=int(fs * 0.92), color=color,
+                    cell, size=fs, color=color,
                     bold=sel or ri == 0,
                     pos=(px + int(col_fx[ci] * pw), y - rh),
                     widget_size=(col_w[ci], rh), halign="left"))
+            if ri == 0:                          # 表头下方备注：各列含义
+                for ci, txt in enumerate(NOTE):
+                    self.add_widget(_label(
+                        txt, size=nfs, color=(0.65, 0.68, 0.62, 1),
+                        pos=(px + int(col_fx[ci] * pw), y - rh - nh),
+                        widget_size=(col_w[ci], nh), halign="left"))
+                y -= rh + nh                     # 表头行占位=表头+备注
+                continue
             y -= rh
-        y -= int(0.012 * H)
         self.add_widget(_label(
             "总分越低越优；分项为对总分的贡献，负值=利好该动作",
-            size=int(fs * 0.85), color=(0.65, 0.68, 0.62, 1),
-            pos=(px + int(0.03 * pw), py + int(0.045 * H)),
-            widget_size=(int(0.94 * pw), int(0.03 * H)), halign="left"))
-        bh = int(0.045 * H)
+            size=fs, color=(0.65, 0.68, 0.62, 1),
+            pos=(px + int(0.03 * pw), py + int(0.012 * H) + bh + 8),
+            widget_size=(int(0.94 * pw), lh), halign="left"))
         # 左下「校核」（阶段五人工校核入口）+ 右下「关闭」
         self.add_widget(FlatButton("校核", (0.72, 0.45, 0.12, 1),
                                    (lambda sn=snap: self._open_review(sn)),
                                    pos=(px + int(0.03 * pw),
-                                        py + int(0.010 * H)),
-                                   size=(int(bh * 1.5), bh)))
+                                        py + int(0.012 * H)),
+                                   size=(int(bh * 1.5), bh), font_size=fs))
         self.add_widget(FlatButton("关闭", BLUE, self._close_snapshot,
                                    pos=(px + pw - int(0.03 * pw)
                                         - int(bh * 1.5),
-                                        py + int(0.010 * H)),
-                                   size=(int(bh * 1.5), bh)))
+                                        py + int(0.012 * H)),
+                                   size=(int(bh * 1.5), bh), font_size=fs))
 
     # ---- 人工校核标注（阶段五）：类别/结论/建议/适用条件/是否入回归集
     def _open_review(self, snap: dict):
@@ -630,10 +686,14 @@ class ReplayScreen(Screen):
         grid = GridLayout(cols=1, spacing=int(0.012 * H),
                           padding=int(0.010 * W), size_hint=(1, None))
         rh = int(0.062 * H)
+        # 列表文字字号 = 行内「打开」按钮文字字号（2026-10-19 用户规格）；
+        # 按钮实际宽 = BoxLayout 按行内 4 子件（名称+3 钮）size_hint 分配
+        inner = int(0.90 * W) - 2 * int(0.010 * W)
+        frow = _btn_font("打开", int(0.13 * (inner - 3 * int(0.006 * W))), rh)
         for it in items:
             row = BoxLayout(orientation="horizontal", spacing=int(0.006 * W),
                             size_hint=(1, None), size=(0, rh))
-            lb = _label(it["name"], size=max(12, int(0.022 * H)),
+            lb = _label(it["name"], size=frow,
                         halign="left", widget_size=(int(0.58 * W), rh))
             lb.size_hint = (0.61, 1)     # BoxLayout 内按宽度比例占位
             row.add_widget(lb)
@@ -658,6 +718,9 @@ class ReplayScreen(Screen):
         W, H = Window.width, Window.height
         s, g = self.session, self.session.game
         fs = max(12, int(0.024 * H))
+        # 回放页各区文字（头像旁/出牌区/理由区/对比按钮）统一=「下一步」字号
+        # （2026-10-19 用户规格）；fs 仅保留给右上局数指示
+        fnav = _btn_font("下一步", int(0.078 * H) * 1.5, int(0.078 * H))
         # 背景 + 浅色分隔线（四列三行内缝）
         from ui import Panel, WOOD
         self.add_widget(Panel(pos=(0, 0), size=(W, H), color=WOOD,
@@ -673,9 +736,9 @@ class ReplayScreen(Screen):
         row_h = int(H / 4)
         for k, pid in enumerate((0, 1, 2, 3)):
             top = H - k * row_h          # 本行顶边（Kivy y 自下而上）
-            self._row_hand(g, pid, top, row_h, fs)
-            self._row_moves(s, g, pid, top, row_h, fs)
-            self._row_reasons(s, pid, top, row_h, fs)
+            self._row_hand(g, pid, top, row_h, fnav)
+            self._row_moves(s, g, pid, top, row_h, fnav)
+            self._row_reasons(s, pid, top, row_h, fnav)
         # 按钮列（理由区扩至 0.3W 后按钮区缩减为 0.9W–1.0W）：全部按钮
         # 宽:高=3:2；高度 0.052H→0.078H（+50%），右缘与各钮垂直中心不变
         bh = int(0.078 * H)
@@ -746,103 +809,12 @@ class ReplayScreen(Screen):
         self._draw_hand_h(g, pid, cx + side // 2 + gap,
                           int(0.4 * W) - 4, top - row_h, ch, up=True)
 
-    def _hand_groups(self, g, pid):
-        """手牌按正常棋局 AI 的理牌方式分组：王/炸弹 → 同花顺 → 顺子 →
-        连对优先成组，其余按点数自然成组（三张/对子/单张）；组间按组内
-        最大牌力降序（左→右减小），组内牌力降序（底部整张可见为最大牌）。
-        窗口与 rules._gen_straights/_gen_pair_chains 一致（A2345：rank 1
-        视作 A）；红桃级牌按自然点数参与，不做事后百搭重组。"""
-        cards = list(g.hands[pid])
-        level = g.level
-        # sort_key 已含 -point_value：直接升序即牌力降序（勿再 reverse）
-        jokers = sorted((c for c in cards if c.is_joker),
-                        key=lambda c: sort_key(c, level))
-        plain = [c for c in cards if not c.is_joker]
-        used: set = set()
-        groups: List[List[Card]] = []
-
-        def grab(cs):
-            for c in cs:
-                used.add(c.eid)
-            groups.append(sorted(cs, key=lambda c: sort_key(c, level)))
-
-        def pick(pool: List[Card]):
-            """取池中第一张未用牌。"""
-            return next((c for c in pool if c.eid not in used), None)
-
-        if jokers:
-            grab(jokers)
-        by_rank: Dict[int, List[Card]] = {}
-        for c in plain:
-            by_rank.setdefault(c.rank, []).append(c)
-        # 炸弹：同点数 ≥4（两副牌 8 张并一组）
-        for r in sorted(by_rank, key=lambda r: -point_value(r, level)):
-            if len(by_rank[r]) >= 4:
-                grab(by_rank[r])
-        L = RuleConfig.STRAIGHT_LENGTH
-        # 同花顺：每花色自高窗口向低贪心（价值高于普通顺子，先取）
-        by_suit: Dict[Any, Dict[int, List[Card]]] = {}
-        for c in plain:
-            if c.eid not in used:
-                by_suit.setdefault(c.suit, {}).setdefault(c.rank, []).append(c)
-        for ranks in by_suit.values():
-            for start in range(14 - L, 0, -1):
-                picks = []
-                for r in range(start, start + L):
-                    nat = 14 if r == 1 else r
-                    c = pick(ranks.get(nat, []))
-                    if c is None:
-                        picks = []
-                        break
-                    picks.append(c)
-                if picks:
-                    grab(picks)
-        # 顺子：跨花色自高窗口向低贪心
-        pool: Dict[int, List[Card]] = {}
-        for c in plain:
-            if c.eid not in used:
-                pool.setdefault(c.rank, []).append(c)
-        for start in range(14 - L, 0, -1):
-            picks = []
-            for r in range(start, start + L):
-                nat = 14 if r == 1 else r
-                c = pick(pool.get(nat, []))
-                if c is None:
-                    picks = []
-                    break
-                picks.append(c)
-            if picks:
-                grab(picks)
-        # 连对：K 个连续对子（每点取 2 张）
-        K = RuleConfig.PAIR_CHAIN_PAIRS
-        for start in range(14 - K, 0, -1):
-            picks = []
-            for r in range(start, start + K):
-                nat = 14 if r == 1 else r
-                cs = [c for c in pool.get(nat, []) if c.eid not in used][:2]
-                if len(cs) < 2:
-                    picks = []
-                    break
-                picks.extend(cs)
-            if picks:
-                grab(picks)
-        # 其余按点数自然成组（三张/对子/单张），点数降序
-        rest: Dict[int, List[Card]] = {}
-        for c in plain:
-            if c.eid not in used:
-                rest.setdefault(c.rank, []).append(c)
-        for r in sorted(rest, key=lambda r: -point_value(r, level)):
-            grab(rest[r])
-        groups.sort(key=lambda col: -max(point_value(c.rank, level)
-                                         for c in col))
-        return groups
-
     def _draw_hand_h(self, g, pid, x_left, x_right, y_base, ch, up):
-        """横排手牌（同正常模式「我的手牌」分组方式）：从左到右牌力减小，
-        同点数叠放；总宽超区压缩列距（下限 0.30cw）；组内偏移 0.24ch，
+        """横排手牌（未整理手牌形式）：从左到右牌力减小，同点数叠放；
+        总宽超区压缩列距（下限 0.30cw）；组内偏移 0.24ch，
         k=0 最后绘制整张可见。up=False 顶对齐向下叠（复盘行内用）。"""
         from ui import CardWidget
-        groups = self._hand_groups(g, pid)
+        groups = _hand_columns(g.hands[pid], g.level)
         if not groups:
             return
         cw = int(ch * 0.72)
@@ -919,6 +891,7 @@ class ReplayScreen(Screen):
                                        widget_size=(int(0.05 * W), slot_h)))
                 continue
             cards = [_CARD_BY_EID[e] for e in a["eids"] if e in _CARD_BY_EID]
+            cards = display_order(cards, g.level, _action_combo(a))
             ch = int(slot_h * 0.9)   # 牌高尽量占满槽位高（90%）
             cw = int(ch * 0.72)
             n = len(cards)
@@ -934,8 +907,8 @@ class ReplayScreen(Screen):
 
     # ---- 理由列：与出牌槽位逐行对齐（文字左右紧贴理由区分隔线、各留
     #      0.5 字宽；限宽自动换行，写满槽位后以省略号结尾）；槽位右端
-    #      「对比」按钮（宽=槽位高、3:2）打开候选分项面板；无 did 的旧档
-    #      回退显示 reason，历史记录兼容
+    #      「对比」按钮（宽=槽位高、3:2，文字=「下一步」字号）打开候选
+    #      分项面板；无 did 的旧档回退显示 reason，历史记录兼容
     def _row_reasons(self, s, pid, top, row_h, fs):
         from ui import FlatButton, _label
         W = Window.width
@@ -949,14 +922,13 @@ class ReplayScreen(Screen):
             _, s_top, slot_h = geo[k]
             btn_w = slot_h              # 对比按钮宽=槽位高，3:2（本页统一比例）
             btn_h = int(slot_h / 1.5)
+            size = fs                   # 文字统一=「下一步」字号（2026-10-19）
             if snap is not None:
-                size = max(10, int(fs * 0.78))
                 text = _one_line(format_snapshot_summary(snap))
             else:
                 text = _one_line(a.get("reason") or "")
                 if not text:
                     continue
-                size = max(11, int(fs * 0.85))
             # 文字区：左右各留 0.5 字宽紧贴 0.6W/0.9W 分隔线；有对比按钮时
             # 文字右界让开按钮（再留 0.5 字宽）
             gap = size // 2
@@ -979,7 +951,7 @@ class ReplayScreen(Screen):
                     (lambda sn=snap: self._open_snapshot(sn)),
                     pos=(right + gap, s_top - slot_h
                          + (slot_h - btn_h) // 2),
-                    size=(btn_w, btn_h)))
+                    size=(btn_w, btn_h), font_size=size))
 
     # ------------------------------------------------------------ 步进
     def _go_start(self):
