@@ -42,6 +42,7 @@ _SID_FEATURES = {
     "novice": frozenset(),
     "intermediate": frozenset({ai.FEATURE_URGENT_TOP}),
     "advanced": ai.HIGH_FEATURES,
+    "value": frozenset(),    # 夯级档：胜利值公式独立，无 V1.2 特性
 }
 
 # 可写目录（与 replay_ui 同套 frozen 规则：exe 旁 / 源码目录）
@@ -122,6 +123,7 @@ class DecisionSnapshot:
     candidates: List[Dict[str, Any]] = field(default_factory=list)
     final: Dict[str, Any] = field(default_factory=dict)
     cost: Dict[str, Any] = field(default_factory=dict)
+    context: Optional[Dict[str, Any]] = None   # 局面级参数（value 档 4 因子输入）
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -139,6 +141,7 @@ class DecisionSnapshot:
             "predictions": self.predictions, "team_task": self.team_task,
             "candidates": self.candidates,
             "final": self.final, "cost": self.cost,
+            "context": self.context,
         }
 
 
@@ -155,7 +158,8 @@ def build_decision_snapshot(seed: int, game, pid: int, sid: str, *,
                             n_candidates: int = 0,
                             search_depth: int = 0,
                             n_rollouts: int = 0,
-                            team_task: Optional[Dict[str, Any]] = None
+                            team_task: Optional[Dict[str, Any]] = None,
+                            context: Optional[Dict[str, Any]] = None
                             ) -> DecisionSnapshot:
     """在决策时刻（动作套用前）构建快照。game 须处于该 pid 行牌前状态。
 
@@ -200,6 +204,7 @@ def build_decision_snapshot(seed: int, game, pid: int, sid: str, *,
               "n_candidates": n_candidates if n_candidates else len(cands),
               "search_depth": search_depth, "n_rollouts": n_rollouts},
         candidates=cands,
+        context=context,
     )
 
 
@@ -276,11 +281,19 @@ def _best_alternative_margin(snap: Dict[str, Any]) -> Optional[float]:
 def format_candidates_table(snap: Dict[str, Any]) -> List[List[str]]:
     """快照候选对比 → 文本表格（复盘「候选对比」面板数据源，纯函数）。
 
-    返回行列表（首行为表头）：候选描述 | 总分 | 七分项。分项列名取
-    B.5 中文短标：走牌/协同/压制/牌权/成本/风险/终局。总分越低越优，
-    各分项为对总分的贡献（负值=利好）；risk 阶段四实装，经典档系数 0
-    （Weights 启用后为 inference 被压风险估计）。
+    返回行列表（首行为表头），按快照 sid 切列：
+
+    - 经典档（默认）：候选 | 总分 | 七分项（B.5 中文短标 走牌/协同/压制/
+      牌权/成本/风险/终局）。总分越低越优，各分项为对总分的贡献
+      （负值=利好）；risk 阶段四实装，经典档系数 0（Weights 启用后为
+      inference 被压风险估计）。
+    - value 档（夯级）：候选 | 四因子（牌力/压制/增益/终局）| 胜利值
+      （胜利值越高越优，四因子连乘；牌力=出牌后牌力=控制÷(非炸手数+1)）。
+      基本参数（当前牌力/控制构成/手数清单）在快照面板左列两表
+      （数据源 snap.context.cur_groups，2026-10-20 用户定调试布局）。
     """
+    if (snap.get("sid") or "") == "value":
+        return _format_value_table(snap)
     head = ["候选", "总分", "走牌", "协同", "压制", "牌权", "成本", "风险",
             "终局"]
     rows = [head]
@@ -300,6 +313,39 @@ def format_candidates_table(snap: Dict[str, Any]) -> List[List[str]]:
         row = [desc, f"{c.get('score_total', 0):.1f}"]
         row += [f"{p.get(k, 0) or 0:.1f}" for k in ai.SCORE_PARTS]
         rows.append(row)
+    return rows
+
+
+_VALUE_HEAD = ["候选", "牌力", "压制", "增益", "终局", "胜利值"]
+
+
+def _format_value_table(snap: Dict[str, Any]) -> List[List[str]]:
+    """value 档候选行：四因子 + 胜利值（当前牌力/控制构成/手数清单在
+    面板左列两表，不经本表）。候选首列优先用采集时生成的 desc
+    （类型短名+点数串，如 炸弹7777 / 三二55544），旧档快照无 desc 时
+    回退旧格式（类型+关键点，多张带 ×n 后缀）。"""
+    rows = [list(_VALUE_HEAD)]
+    for c in snap.get("candidates") or []:
+        if c.get("kind") == "pass":
+            desc = "过牌"
+        elif c.get("desc"):
+            desc = str(c["desc"])
+        else:
+            rank = c.get("rank")
+            label = {17: "大王", 16: "小王", 15: "级牌"}.get(rank) \
+                or RANK_LABELS.get(rank, "?")
+            desc = f"{c.get('type') or '?'}{label}"
+            if len(c.get("eids") or []) > 1:
+                desc += f"×{len(c['eids'])}"
+        if c.get("selected"):
+            desc = "▶" + desc
+        p = c.get("score_parts") or {}
+        rows.append([desc,
+                     f"{p.get('power', 0) or 0:.2f}",
+                     f"{p.get('pressure', 0) or 0:.2f}",
+                     f"{p.get('partner', 0) or 0:.2f}",
+                     f"{p.get('endgame', 0) or 0:.2f}",
+                     f"{c.get('score_total', 0) or 0:.2f}"])
     return rows
 
 
@@ -403,7 +449,8 @@ class DecisionLogger:
                 cost_ms: float = 0.0,
                 candidates: Optional[List[Dict[str, Any]]] = None,
                 n_candidates: int = 0,
-                search_depth: int = 0, n_rollouts: int = 0) -> Optional[str]:
+                search_depth: int = 0, n_rollouts: int = 0,
+                context: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """采集决策快照并落盘，返回 decision_id；失败返回 None。"""
         try:
             trick, seq = self.next_meta(game)
@@ -413,7 +460,8 @@ class DecisionLogger:
                 action_index=action_index, trick=trick, seq=seq,
                 cost_ms=cost_ms, candidates=candidates,
                 n_candidates=n_candidates,
-                search_depth=search_depth, n_rollouts=n_rollouts)
+                search_depth=search_depth, n_rollouts=n_rollouts,
+                context=context)
             self.store.append(snap.to_dict())
             return snap.decision_id
         except Exception:

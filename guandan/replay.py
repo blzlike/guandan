@@ -53,8 +53,14 @@ class Recorder:
         if event == "round_start":
             self.actions.append({"kind": "round_start", "round": rnd})
         elif event == "play":
-            self.actions.append({"kind": "play", "round": rnd,
-                                 "pid": data["pid"], "eids": list(data["eids"])})
+            act = {"kind": "play", "round": rnd,
+                   "pid": data["pid"], "eids": list(data["eids"])}
+            cb = data.get("combo")
+            if cb is not None:   # 牌型解释随档：复盘出牌区精确放置红心配
+                act["ctype"] = cb.type.value
+                act["crank"] = cb.rank
+                act["csubs"] = [list(s) for s in cb.subs]
+            self.actions.append(act)
         elif event == "pass":
             self.actions.append({"kind": "pass", "round": rnd,
                                  "pid": data["pid"]})

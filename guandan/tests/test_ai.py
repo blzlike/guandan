@@ -6,11 +6,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from ai import (CardMemory, auto_step, choose_action, simulate_match)
+from ai import (CardMemory, Budget, FEATURE_FEED, HIGH_FEATURES, Weights,
+                auto_step, choose_action, choose_action_detail, simulate_match)
 from cards import BIG_JOKER, SMALL_JOKER
 from game import GuandanGame
 from rules import HandType
 from sound import event_for_combo
+from strategy import feed_helps
 
 from helper import club, diamond, heart, spade
 
@@ -98,6 +100,58 @@ def test_enhanced_matches_basic_when_disabled():
     g2 = GuandanGame(rng=random.Random(42))
     a2 = auto_step(g2, enhanced=False)
     assert a1 == a2
+
+
+# ---------------------------------------------------------------- 领出协同评分
+def _feed_state(p0_cards, p2_n=2, p1_n=5, p3_n=5, seed=1):
+    """构造 feed_helps 领出局面：P0 手牌=p0_cards，对家 P2 剩 p2_n 张，
+    P1/P3 各 5 张（无对手报单）；其余实体牌全部记已出。"""
+    g = GuandanGame(rng=random.Random(seed))
+    g.levels = {0: 10, 1: 10}
+    pool = [c for h in g.hands.values() for c in h]
+    rng = random.Random(seed + 7)
+    rng.shuffle(pool)
+    g.hands = {0: list(p0_cards), 1: pool[:p1_n],
+               2: pool[p1_n:p1_n + p2_n],
+               3: pool[p1_n + p2_n:p1_n + p2_n + p3_n]}
+    g.played_cards = pool[p1_n + p2_n + p3_n:]
+    g.finish_order = []
+    g.last_play = None
+    g.phase = "playing"
+    g.turn = 0
+    return g
+
+
+def test_gain_team_synergy_scoring_active():
+    """协同修复回归（2026-10-20）：advanced 口径（无 feed 硬覆盖 +
+    team_feed_lead=1.0）下领出低单 gain_team=-30；经典权重（全 0）本块
+    短路不加；本步能出完时守卫生效，不惩罚出完。修复前该分项被
+    _feed_teammate 硬覆盖完全遮蔽、从未生效。"""
+    p0 = [spade(3), heart(14), heart(13), club(8), club(7),
+          diamond(9), spade(5), heart(6), club(4)]
+    g = _feed_state(p0)
+    assert feed_helps(g, 0)
+    _, _, d_adv = choose_action_detail(
+        g, 0, enhanced=True, features=HIGH_FEATURES - {FEATURE_FEED},
+        budget=Budget(endgame_hand=8, max_candidates=8,
+                      weights=Weights(team_feed_lead=1.0)))
+    low = next(x for x in d_adv["candidates"]
+               if x["kind"] == "play" and x["type"] == "单张")
+    assert low["score_parts"]["gain_team"] == -30.0
+    _, _, d_cls = choose_action_detail(
+        g, 0, enhanced=True, features=HIGH_FEATURES - {FEATURE_FEED},
+        budget=Budget(weights=Weights()))
+    low2 = next(x for x in d_cls["candidates"]
+                if x["kind"] == "play" and x["type"] == "单张")
+    assert low2["score_parts"]["gain_team"] == 0.0
+    # can_finish 守卫：仅 1 张低单（本步出完）→ 不加 -30
+    g1 = _feed_state([spade(3)])
+    _, _, d_fin = choose_action_detail(
+        g1, 0, enhanced=True, features=HIGH_FEATURES - {FEATURE_FEED},
+        budget=Budget(endgame_hand=8, max_candidates=8,
+                      weights=Weights(team_feed_lead=1.0)))
+    sel = next(x for x in d_fin["candidates"] if x["selected"])
+    assert sel["score_parts"]["gain_team"] == 0.0
 
 
 # ---------------------------------------------------------------- 音效映射

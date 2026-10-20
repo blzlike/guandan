@@ -5,7 +5,8 @@ import pytest
 from helper import big_joker, club, diamond, heart, small_joker, spade
 
 from cards import Suit
-from rules import HandType, beats, can_play, classify, find_all_straight_flush_candidates, \
+from rules import HandType, beats, can_play, classify, display_order, \
+    find_all_straight_flush_candidates, \
     find_straight_flushes, generate_legal_moves
 
 LEVEL = 10  # 本级打 10，红桃10 为逢人配
@@ -52,6 +53,49 @@ def test_triple_pair_and_straight():
     a_high = one([spade(10), club(11), diamond(12), heart(13), club(14)])
     assert a_high.type is HandType.STRAIGHT and a_high.rank == 14
     assert beats(a_high, a_low)
+
+
+# ---------------------------------------------------------------- 出牌展示顺序
+def test_display_order_straight_ascending_ace_low():
+    out = display_order([club(8), spade(4), diamond(6), heart(7), club(5)], LEVEL)
+    assert [c.rank for c in out] == [4, 5, 6, 7, 8]
+    a_low = display_order([heart(14), club(2), diamond(3), spade(4), club(5)],
+                          LEVEL)
+    assert [c.rank for c in a_low] == [14, 2, 3, 4, 5]   # A 记最小位
+
+
+def test_display_order_wild_at_substituted_position():
+    # 打10：5,6,7,8+红桃10 可作 4..8 或 5..9
+    w = heart(LEVEL)
+    cards = [spade(5), club(6), diamond(7), heart(8), w]
+    out = display_order(cards, LEVEL)          # 推定取最大解释 5..9
+    assert out[-1] is w
+    four_eight = [c for c in classify(cards, LEVEL)
+                  if c.type is HandType.STRAIGHT and c.rank == 8]
+    assert four_eight, "5678+配应有 4..8 解释"
+    out2 = display_order(cards, LEVEL, four_eight[0])
+    assert out2[0] is w and [c.rank for c in out2[1:]] == [5, 6, 7, 8]
+
+
+def test_display_order_pair_chain_ace_low():
+    # A A 2 2 3 + 配顶 3：A 记最小位，配排在 3 之后（同位按花色）
+    out = display_order([heart(LEVEL), spade(3), spade(14), diamond(14),
+                         spade(2), diamond(2)], LEVEL)
+    assert [c.rank for c in out] == [14, 14, 2, 2, 3, 10]
+    assert [int(c.suit) for c in out[:2]] == [0, 3]   # 黑桃/方块
+
+
+def test_display_order_triple_pair_and_suit_order():
+    out = display_order([diamond(3), club(3), spade(3), heart(4), club(4)],
+                        LEVEL)
+    assert [c.rank for c in out] == [3, 3, 3, 4, 4]   # 三张在前对子在后
+    assert [int(c.suit) for c in out[:3]] == [0, 2, 3]    # 黑/梅/方
+    assert [int(c.suit) for c in out[3:]] == [1, 2]        # 红/梅
+    bomb = display_order([diamond(7), heart(7), club(7), spade(7)], LEVEL)
+    assert [int(c.suit) for c in bomb] == [0, 1, 2, 3]     # 黑红梅方
+    rocket = display_order([big_joker(), small_joker(), big_joker(),
+                            small_joker()], LEVEL)
+    assert [c.rank for c in rocket] == [15, 15, 16, 16]    # 小小大大
 
 
 def test_level_card_in_straight_uses_natural_rank():

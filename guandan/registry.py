@@ -77,7 +77,7 @@ def choose_detail(game, pid: int, profile: Optional[AIProfile], sid: str,
 
 
 _GLOBAL_STRENGTH = {"novice": "novice", "intermediate": "intermediate",
-                    "advanced": "advanced",
+                    "advanced": "advanced", "value": "value",
                     # 旧档位兼容映射（low/high/pimc 已退出设置界面，
                     # classic_low/classic_high/pimc 保留注册供 bench/测试调用）
                     "low": "classic_low", "high": "classic_high",
@@ -139,6 +139,13 @@ register(StrategySpec("pimc", "夯", "关键时刻 PIMC 采样推演，其余沿
 #   endgame_hand=10（risk=0）→ 50.7%，无增益，维持经典 8。
 # 最终梯度见任务书附录 D 阶段六（intermediate 55.3% ≫ novice；
 # advanced ≈ 51.6% 优于 intermediate，risk 分项保留代码、系数 0）。
+# 协同修复（2026-10-20）：advanced 原同时带 feed 硬覆盖与 gain_team 评分
+# （team_feed_lead=1.0），两者触发窗口重叠（领出+对家报牌 1-2 张），
+# feed 提前 return 使评分从未生效 → advanced 与 classic_high 逐字节等价
+# （40 场 25999 决策 0 差异）。修复：advanced 特性集去掉 FEATURE_FEED
+# （硬覆盖送牌保留给 classic_high），改走 gain_team 评分式协同（含
+# can_finish 守卫防一手出完被惩罚）；classic_low/classic_high/pimc/
+# novice/intermediate 配置零变化（各档独立决策，互不影响）。
 _BUDGET_NOVICE = ai.Budget(endgame_hand=0, max_candidates=4)
 _BUDGET_INTERMEDIATE = ai.Budget(max_candidates=6)
 _BUDGET_ADVANCED = ai.Budget(endgame_hand=8, max_candidates=8,
@@ -159,7 +166,7 @@ def _tier(enhanced: bool, feats: frozenset, budget: ai.Budget):
 
 _nov = _tier(False, frozenset(), _BUDGET_NOVICE)
 _inter = _tier(True, frozenset({ai.FEATURE_URGENT_TOP}), _BUDGET_INTERMEDIATE)
-_adv = _tier(True, ai.HIGH_FEATURES, _BUDGET_ADVANCED)
+_adv = _tier(True, ai.HIGH_FEATURES - {ai.FEATURE_FEED}, _BUDGET_ADVANCED)
 
 register(StrategySpec("novice", "初级", "基础规则引擎，轻量快速",
                       _nov[0], _nov[1]))
@@ -167,8 +174,26 @@ register(StrategySpec("intermediate", "中级",
                       "记牌器+报牌压制（urgent_top）",
                       _inter[0], _inter[1]))
 register(StrategySpec("advanced", "高级",
-                      "全特性+推理评分（风险/协同）+深残局搜索",
+                      "记牌器+领出协同评分+深残局搜索",
                       _adv[0], _adv[1]))
+
+# ---------------------------------------------------------------- 夯级（胜利值公式档）
+# 平行新增档：胜利值 = 牌力 × 压制 × 对家增益 × 终局乘数（value_ai.py），
+# 不改动经典/分级/PIMC 与规则引擎。步骤④起进入设置页（_GLOBAL_STRENGTH
+# 含 "value"，resolve_seat 直返）；bench/测试按 sid 直调。
+def _value(game, pid, profile, **opts):
+    import value_ai
+    return value_ai.choose(game, pid, profile, **opts)
+
+
+def _value_detail(game, pid, profile, **opts):
+    import value_ai
+    return value_ai.choose_detail(game, pid, profile, **opts)
+
+
+register(StrategySpec("value", "夯级",
+                      "胜利值公式：牌力×压制×对家增益×终局乘数",
+                      _value, _value_detail))
 
 # 占位（远期注册实现）：
 # register(StrategySpec("dmc", "模型", "Deep Monte-Carlo 自博弈策略", ...))

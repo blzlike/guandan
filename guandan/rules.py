@@ -511,6 +511,60 @@ def can_play(cards: Sequence[Card], prev: Optional[Combo], level_rank: int) -> O
 
 
 # ---------------------------------------------------------------------------
+# 出牌展示顺序（牌桌与复盘共用，2026-10-19 规格）
+# ---------------------------------------------------------------------------
+
+_SEQ_TYPES = (HandType.STRAIGHT, HandType.STRAIGHT_FLUSH,
+              HandType.PAIR_CHAIN, HandType.TRIPLE_CHAIN)
+_SEQ_RANKS = {HandType.STRAIGHT: RuleConfig.STRAIGHT_LENGTH,
+              HandType.STRAIGHT_FLUSH: RuleConfig.STRAIGHT_LENGTH,
+              HandType.PAIR_CHAIN: RuleConfig.PAIR_CHAIN_PAIRS,
+              HandType.TRIPLE_CHAIN: RuleConfig.TRIPLE_CHAIN_SETS}
+
+
+def display_order(cards: Sequence[Card], level_rank: int,
+                  combo: Optional[Combo] = None) -> List[Card]:
+    """返回一组已出牌的展示顺序（列表首元素排最左）。
+
+    - 顺子/同花顺/连对/钢板：按点数从小到大（A2345 中 A 记最小位），
+      红桃级牌（逢人配）排在其实际顶替点数的位置；
+    - 三带二：三张在前、对子在后；
+    - 其余牌型：同点数按黑桃/红桃/梅花/方块从左到右，天王炸小王在前。
+
+    ``combo`` 为实际出牌解释时直接使用其牌型与配牌记录（牌桌用）；缺省
+    按 classify 最大解释推定（同 arrange 口径，复盘旧档用）。无法识别的
+    组合按比较点值升序兜底。
+    """
+    cards = list(cards)
+    if len(cards) <= 1:
+        return cards
+    if combo is None or {c.eid for c in combo.cards} != {c.eid for c in cards}:
+        cands = classify(cards, level_rank)
+        if not cands:
+            return sorted(cards, key=lambda c: (point_value(c.rank, level_rank),
+                                                int(c.suit), c.eid))
+        combo = max(cands, key=lambda c: (c.tier(), c.rank))
+    sub_of = dict(combo.subs)
+    t = combo.type
+    if t in _SEQ_TYPES:
+        start = combo.rank - _SEQ_RANKS[t] + 1
+
+        def pos(c: Card) -> int:
+            raw = sub_of.get(c.eid, c.rank)   # 配牌按顶替点数定位
+            return 1 if raw == 14 and start == 1 else raw
+
+        return sorted(combo.cards, key=lambda c: (pos(c), int(c.suit), c.eid))
+    if t is HandType.TRIPLE_PAIR:
+        t_nat = level_rank if combo.rank == 15 else combo.rank
+        key = lambda c: (int(c.suit), c.eid)
+        triple = [c for c in combo.cards if sub_of.get(c.eid, c.rank) == t_nat]
+        pair = [c for c in combo.cards if sub_of.get(c.eid, c.rank) != t_nat]
+        return sorted(triple, key=key) + sorted(pair, key=key)
+    return sorted(combo.cards, key=lambda c: (point_value(c.rank, level_rank),
+                                              int(c.suit), c.eid))
+
+
+# ---------------------------------------------------------------------------
 # 合法出牌生成（AI 与提示功能共用）
 # ---------------------------------------------------------------------------
 
