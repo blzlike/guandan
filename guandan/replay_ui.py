@@ -322,10 +322,19 @@ class ReplayScreen(Screen):
         self._rebuild()
 
     def _build_snapshot_panel(self, snap: dict):
-        """候选对比覆盖面板：决策信息 + 候选分项表 + 关闭按钮。
+        """候选对比覆盖面板（2026-10-20 用户定调试三区布局）：
 
-        全部文字与回放页「下一步」按钮同字号，校核/关闭按钮随字号增大
-        （2026-10-19 用户规格）；面板放大至 0.86W×0.88H 容纳更大文字。
+        - 标题行（居中）+ value 档局面参数行；删除座位/最终两行信息；
+        - 左区（贴左边缘）三表并排：控制构成（副题「基础方案」，各手
+          控制值+总控制）、手牌清单（出牌前/出牌后，行=类型短名+点数串
+          如 炸弹7777/三二55544，10→X、逢人配→$；旧档回退点数串/资源
+          标签；均按最大牌力组合，出牌后数据源 context.after_groups，
+          旧档显示无明细），出牌前表页脚「非炸手数」、出牌后表页脚
+          「非炸手数/出牌后牌力」，三表下方汇总行「当前牌力 → 出牌后」；
+        - 右列候选分项表（value=4 因子+胜利值 6 列，列宽按内容自适应、
+          列距 1 字符、右贴快照框右沿；经典档 9 列固定比例不变）；
+        - 整页字号 =「下一步」字号的 2/3；底部贴底四因子公式块，字号 =
+          当前字号的 1/2；校核/关闭钮随字号。
         """
         from decision import format_candidates_table
         from ui import BLUE, FlatButton, Panel, _label
@@ -333,51 +342,230 @@ class ReplayScreen(Screen):
         DIM = (0.10, 0.11, 0.13, 0.55)
         self.add_widget(Panel(pos=(0, 0), size=(W, H), color=DIM,
                               border=DIM, radius=0))
-        pw, ph = int(0.86 * W), int(0.88 * H)
+        pw, ph = int(0.90 * W), int(0.88 * H)
         px, py = (W - pw) // 2, (H - ph) // 2
         self.add_widget(Panel(pos=(px, py), size=(pw, ph),
                               color=(0.16, 0.17, 0.15, 0.98)))
-        fs = _btn_font("下一步", int(0.078 * H) * 1.5, int(0.078 * H))
+        fs0 = _btn_font("下一步", int(0.078 * H) * 1.5, int(0.078 * H))
+        fs = max(11, int(fs0 * 2 / 3))           # 整页字号 = 原字号 2/3
         lh = fs + 8                              # 文字行高（含行距）
         y = py + ph - lh - 10
-        fin = snap.get("final") or {}
         self.add_widget(_label(
             f"[b]决策快照[/b]  {snap.get('decision_id', '')}",
-            size=fs, pos=(px + int(0.03 * pw), y),
-            widget_size=(int(0.7 * pw), lh), halign="left"))
+            size=fs, pos=(px, y),
+            widget_size=(pw, lh), halign="center"))
         y -= lh + 4
-        cost = snap.get("cost") or {}
-        self.add_widget(_label(
-            f"座位{snap.get('pid')} · {snap.get('sid')}"
-            f" · {snap.get('profile')} · 第{snap.get('trick')}轮第{snap.get('seq')}手"
-            f" · 候选{cost.get('n_candidates', 0)}个 · {cost.get('ms', 0)}ms",
-            size=fs, color=(0.85, 0.85, 0.80, 1),
-            pos=(px + int(0.03 * pw), y),
-            widget_size=(int(0.9 * pw), lh), halign="left"))
-        y -= lh
-        st = fin.get("score_total")
-        self.add_widget(_label(
-            f"最终：{fin.get('kind') == 'play' and '出牌' or '过牌'}"
-            f"{f'（总分 {st:.1f}）' if isinstance(st, (int, float)) else ''}"
-            f"　{fin.get('reason') or ''}",
-            size=fs, color=(1.0, 0.92, 0.60, 1),
-            pos=(px + int(0.03 * pw), y),
-            widget_size=(int(0.94 * pw), lh), halign="left"))
-        y -= lh
-        # 分项表：候选 | 总分 | 走牌 协同 压制 牌权 成本 风险 终局
-        # 表头下附备注行说明各列含义（2026-10-19 用户要求）。备注字号按
-        # 最窄列宽自适应（保证每行至少容 2 字），窄屏自动缩小防溢出。
+        is_value = (snap.get("sid") or "") == "value"
+        # 局面参数行（value 档）：压制/增益因子的局面级输入；旧档无
+        # context 跳过。
+        if is_value:
+            ctx0 = snap.get("context") or {}
+            opp_s = "/".join(f"{e:.1f}" for e in (ctx0.get("opp_ests")
+                                                  or ())) or "—"
+            mate_s = f"{ctx0['mate_est']:.1f}" \
+                if ctx0.get("mate_est") else "—"
+            acc = ctx0.get("mate_accept")
+            acc_s = "" if acc is None else ("·可送" if acc else "·不可送")
+            self.add_widget(_label(
+                f"参数：对手手数(估) {opp_s} · 对家手数(估) {mate_s}{acc_s}",
+                size=fs, color=(0.85, 0.85, 0.80, 1),
+                pos=(px + int(0.03 * pw), y),
+                widget_size=(int(0.9 * pw), lh), halign="left"))
+            y -= lh
+        # 右列分项表按 sid 切列：value 档 6 列=候选|牌力 压制 增益 终局|
+        # 胜利值（基本参数在左区三表，列宽按内容自适应）；经典档 9 列
+        # 固定比例不变。表头下附备注行说明各列含义（字号自适应防溢出）。
         rows = format_candidates_table(snap)
-        col_fx = (0.03, 0.30, 0.42, 0.50, 0.58, 0.66, 0.74, 0.82, 0.90)
-        col_w = [int(0.26 * pw), int(0.11 * pw)] + [int(0.075 * pw)] * 7
-        NOTE = ("▶=实际选择", "越低\n越优", "出牌\n收益", "队友\n配合",
-                "压制\n对手", "节奏\n得失", "牌力\n消耗", "被压\n风险",
-                "终结\n影响")
-        nfs = min(fs, int(min(col_w) * 0.45))
+        if is_value:
+            NOTE = ("▶=实际选择", "出牌后\n牌力", "压制\n对手", "队友\n配合",
+                    "终结\n乘数", "越高\n越优")
+        else:
+            col_fx = (0.03, 0.30, 0.42, 0.50, 0.58, 0.66, 0.74, 0.82, 0.90)
+            col_w = [int(0.26 * pw), int(0.11 * pw)] + [int(0.075 * pw)] * 7
+            NOTE = ("▶=实际选择", "越低\n越优", "出牌\n收益", "队友\n配合",
+                    "压制\n对手", "节奏\n得失", "牌力\n消耗", "被压\n风险",
+                    "终结\n影响")
+            tail = "总分越低越优；分项为对总分的贡献，负值=利好该动作"
+
+        def _tw(txt, size) -> int:
+            """文本宽估算（与 _btn_font 同口径：CJK 全宽、ASCII 0.55）。"""
+            return sum(size if ord(ch) > 0x2E80 else int(size * 0.55)
+                       for ch in str(txt))
+
+        _rw_cache = {}
+
+        def _rw(txt, size) -> int:
+            """真实渲染宽（CoreLabel 单行实测）：desc 行含宽字母（X/J/Q/K/
+            小王/大王），_tw 估算偏小会截断，改用实测（2026-10-20）。
+            加粗行按上限预留余量。"""
+            key = (str(txt), size)
+            if key not in _rw_cache:
+                from kivy.core.text import Label as CoreLabel
+                from ui import _CJK_FONT
+                core = CoreLabel(font_name=_CJK_FONT, font_size=size)
+                _rw_cache[key] = int(core.get_extents(str(txt))[0] or 0)
+            return _rw_cache[key] + int(size * 0.18) + 2
+
+        if is_value:
+            # 列宽按内容自适应（表头/数据实测宽、备注按 nfs），列距=1 个
+            # 字符宽度，整表右贴快照框右沿（2026-10-20 用户定）。
+            raw = []
+            for ci in range(len(rows[0])):
+                w = _rw(rows[0][ci], fs)
+                for r in rows[1:]:
+                    w = max(w, _rw(r[ci], fs))
+                raw.append(w)
+            nfs = min(fs, int(min(raw) * 0.45))
+            ws = [max(raw[ci], max(_rw(ln, nfs)
+                                   for ln in NOTE[ci].split("\n")))
+                  for ci in range(len(raw))]
+            gap_c = max(6, int(0.55 * fs))       # 列距=1 个字符宽度
+            xr = px + pw - int(0.012 * pw)       # 右贴快照框右沿
+            xs = [0] * len(ws)
+            for ci in range(len(ws) - 1, -1, -1):
+                xs[ci] = xr - ws[ci]
+                xr = xs[ci] - gap_c
+        else:
+            nfs = min(fs, int(min(col_w) * 0.45))
+            ws = col_w
+            xs = [px + int(fx * pw) for fx in col_fx]
         nh = int(nfs * 2.3) + 4                  # 备注行高（容两行）
         rh = fs + 10
         bh = max(int(0.052 * H), int(fs * 1.7))  # 底部按钮随字号增大
-        bottom = py + int(0.012 * H) + bh + lh + 6
+        fbase = py + int(0.012 * H) + bh + 8     # 底注锚点（贴底）
+        if is_value:                             # 四因子公式：字号=当前 1/2
+            FL = ("胜利值 = 牌力 × 压制 × 增益 × 终局",
+                  "牌力 = 出牌后控制 ÷ (出牌后手数 + 1)，每组恒 1 手",
+                  "压制 = 1 + Σ 被压概率 ÷ 对手估计手数^1.5",
+                  "增益 = 1 + 对家减量 ÷ (对家估计手数 + 1)",
+                  "终局 = 出完×5 · 阻断×3 · 用炸×2 · 送冲×2.5 连乘")
+            nff = max(9, fs // 2)
+            flh = nff + 4                        # 公式行高（单行）
+            bottom = fbase + len(FL) * flh + 6
+        else:
+            bottom = py + int(0.012 * H) + bh + lh + 6
+        if is_value:                             # 左区三表并排（贴左边缘）
+            ctx = snap.get("context") or {}
+            groups = ctx.get("cur_groups") or []
+            afters = ctx.get("after_groups")
+            gt = 6                               # 表间距（列宽自适应压紧）
+            ga_x = 6                             # 控制构成表 x
+            HEAD_C = (0.75, 0.78, 0.72, 1)
+            BODY_C = (0.95, 0.95, 0.90, 1)
+            SUB_C = (0.65, 0.68, 0.62, 1)
+
+            def _col(x_off, w_lab, head, sub, trows, foot):
+                """单列小表：主/副两行表头 + (标签, 值) 行 + 页脚行；
+                行数超出可视高度截断；返回下一空行 y。"""
+                ty = y
+                self.add_widget(_label(
+                    f"[b]{head}[/b]", size=fs, color=HEAD_C,
+                    pos=(px + x_off, ty - rh),
+                    widget_size=(w_lab + c2, rh), halign="left"))
+                self.add_widget(_label(
+                    sub, size=nfs, color=SUB_C,
+                    pos=(px + x_off, ty - 2 * rh),
+                    widget_size=(w_lab + c2, rh), halign="left"))
+                ty -= 2 * rh
+                for lab, val in trows:
+                    if ty - rh < bottom:
+                        break
+                    self.add_widget(_label(
+                        lab, size=fs, color=BODY_C,
+                        pos=(px + x_off, ty - rh),
+                        widget_size=(w_lab, rh), halign="left"))
+                    self.add_widget(_label(
+                        val, size=fs, color=BODY_C,
+                        pos=(px + x_off + w_lab, ty - rh),
+                        widget_size=(c2, rh), halign="left"))
+                    ty -= rh
+                for lab, val in foot:
+                    self.add_widget(_label(
+                        lab, size=fs, color=HEAD_C,
+                        pos=(px + x_off, ty - rh),
+                        widget_size=(w_lab, rh), halign="left"))
+                    self.add_widget(_label(
+                        val, size=fs, color=HEAD_C,
+                        pos=(px + x_off + w_lab, ty - rh),
+                        widget_size=(c2, rh), halign="left"))
+                    ty -= rh
+                return ty
+
+            def _hand_rows(glist):
+                """手牌清单行：类型短名+点数串（desc，如 炸弹7777；旧档
+                回退点数串/资源标签+配/弱/×n 标记）+ 手数值（火牌=—，
+                其余恒 1，2026-10-20 用户定弱组不再加权）。"""
+                out = []
+                for g in glist:
+                    if g.get("desc"):
+                        lab = str(g["desc"])
+                    elif "cards" in g:
+                        lab = str(g["cards"])
+                    else:
+                        lab = str(g.get("label", "?"))
+                        if g.get("wild_used"):
+                            lab += "·配"
+                        if g.get("weak"):
+                            lab += "·弱"
+                        if g.get("n", 1) > 1 and "x" not in lab:
+                            lab += f"×{g['n']}"
+                    val = "—" if g.get("fire") else "1"
+                    out.append((lab, val))
+                return out
+
+            rows_a = [(str(g.get("desc") or g.get("label", "?")),
+                       f"{g['ctrl']:.2f}")
+                      for g in groups if g.get("ctrl", 0.0) > 0.0]
+            foot_a = [("总控制", f"{ctx.get('cur_control', 0) or 0:.2f}")]
+            rows_b = _hand_rows(groups)
+            foot_b = [("非炸手数", f"{ctx.get('cur_hands', 0) or 0:.1f}")]
+            if afters is None:                   # 旧档无出牌后明细
+                rows_c, foot_c = [("（无明细）", "")], []
+            else:
+                rows_c = _hand_rows(afters)
+                if ctx.get("finished"):
+                    foot_c = [("已出完", "—"), ("非炸手数", "—"),
+                              ("出牌后牌力", "—")]
+                else:
+                    foot_c = [("非炸手数",
+                               f"{ctx.get('after_hands', 0) or 0:.1f}"),
+                              ("出牌后牌力",
+                               f"{ctx.get('after_power', 0) or 0:.2f}")]
+            # 列宽按内容自适应（行格式=类型短名+点数串，实测宽防截断；
+            # 左区总宽不越候选表最左列，越界时标签列按比例压紧）
+            def _wlab(texts) -> int:
+                return max((_rw(t, fs) for t in texts), default=0)
+            wa = _wlab([r[0] for r in rows_a] + ["总控制"])
+            wb = _wlab([r[0] for r in rows_b] + ["非炸手数"])
+            wc = _wlab([r[0] for r in rows_c] + [f[0] for f in foot_c])
+            vals = [r[1] for r in rows_a + rows_b + rows_c] \
+                + [v for _, v in foot_a + foot_b + foot_c]
+            c2 = max(30, max((_rw(v, fs) for v in vals), default=0))
+            budget = xs[0] - px - ga_x - 2 * gt - 6   # 左区可用宽（留缝）
+            if wa + wb + wc + 3 * c2 > budget:
+                k = max(0.0, budget - 3 * c2) / (wa + wb + wc)
+                wa, wb, wc = (max(36, int(w * k)) for w in (wa, wb, wc))
+            gb_x = ga_x + wa + c2 + gt            # 手牌清单（出牌前）x
+            gc_x = gb_x + wb + c2 + gt            # 手牌清单（出牌后）x
+            ys = [_col(ga_x, wa, "控制构成", "基础方案", rows_a, foot_a)]
+            ys.append(_col(gb_x, wb, "手牌清单", "（出牌前）",
+                           rows_b, foot_b))
+            ys.append(_col(gc_x, wc, "手牌清单", "（出牌后）",
+                           rows_c, foot_c))
+            if afters is None:
+                tail_s = "无出牌后明细"
+            elif ctx.get("finished"):
+                tail_s = "一手出完"
+            else:
+                tail_s = f"{ctx.get('after_power') or 0:.2f}"
+            sy = min(ys) - rh
+            if sy >= bottom:                     # 三表下方汇总行
+                self.add_widget(_label(
+                    f"[b]当前牌力[/b] {ctx.get('cur_power', 0) or 0:.2f}"
+                    f" → 出牌后 {tail_s}", size=fs, color=HEAD_C,
+                    pos=(px + ga_x, sy),
+                    widget_size=(gc_x - ga_x + wc + c2, rh),
+                    halign="left"))
         for ri, row in enumerate(rows):
             if y - (rh + (nh if ri == 0 else 0)) < bottom:
                 break
@@ -388,22 +576,30 @@ class ReplayScreen(Screen):
                 self.add_widget(_label(
                     cell, size=fs, color=color,
                     bold=sel or ri == 0,
-                    pos=(px + int(col_fx[ci] * pw), y - rh),
-                    widget_size=(col_w[ci], rh), halign="left"))
+                    pos=(xs[ci], y - rh),
+                    widget_size=(ws[ci], rh), halign="left"))
             if ri == 0:                          # 表头下方备注：各列含义
                 for ci, txt in enumerate(NOTE):
                     self.add_widget(_label(
                         txt, size=nfs, color=(0.65, 0.68, 0.62, 1),
-                        pos=(px + int(col_fx[ci] * pw), y - rh - nh),
-                        widget_size=(col_w[ci], nh), halign="left"))
+                        pos=(xs[ci], y - rh - nh),
+                        widget_size=(ws[ci], nh), halign="left"))
                 y -= rh + nh                     # 表头行占位=表头+备注
                 continue
             y -= rh
-        self.add_widget(_label(
-            "总分越低越优；分项为对总分的贡献，负值=利好该动作",
-            size=fs, color=(0.65, 0.68, 0.62, 1),
-            pos=(px + int(0.03 * pw), py + int(0.012 * H) + bh + 8),
-            widget_size=(int(0.94 * pw), lh), halign="left"))
+        if is_value:                             # 底注：四因子公式（贴底）
+            for i, txt in enumerate(FL):
+                self.add_widget(_label(
+                    txt, size=nff, color=(0.65, 0.68, 0.62, 1),
+                    pos=(px + int(0.03 * pw),
+                         fbase + (len(FL) - 1 - i) * flh),
+                    widget_size=(int(0.94 * pw), flh), halign="left"))
+        else:
+            self.add_widget(_label(
+                tail,
+                size=fs, color=(0.65, 0.68, 0.62, 1),
+                pos=(px + int(0.03 * pw), fbase),
+                widget_size=(int(0.94 * pw), lh), halign="left"))
         # 左下「校核」（阶段五人工校核入口）+ 右下「关闭」
         self.add_widget(FlatButton("校核", (0.72, 0.45, 0.12, 1),
                                    (lambda sn=snap: self._open_review(sn)),

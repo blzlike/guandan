@@ -273,6 +273,40 @@ def test_reason_field_roundtrip(tmp_path, monkeypatch):
     assert got and got[0]["reason"] == "压住对家，夺回牌权"
 
 
+# ---------------------------------------------------------------- 展示顺序（2026-10-19）
+def test_hand_columns_unsorted_form():
+    """复盘手牌区=未整理手牌形式：同点数一列，列自左向右点值降序。"""
+    import replay_ui
+    from helper import spade, heart, club, diamond, big_joker, small_joker
+    level = 7
+    cards = [diamond(3), spade(9), spade(3), club(3), small_joker(),
+             big_joker(), heart(7), spade(7)]
+    cols = replay_ui._hand_columns(cards, level)
+    # 大王 → 小王 → 级牌7 → 9 → 3；列内花色升序（黑红梅方）
+    assert [[c.rank for c in col] for col in cols] == \
+        [[16], [15], [7, 7], [9], [3, 3, 3]]
+    assert [int(c.suit) for c in cols[2]] == [0, 1]
+    assert [int(c.suit) for c in cols[4]] == [0, 2, 3]
+
+
+def test_record_combo_fields_and_order():
+    """新档 play 动作带牌型解释字段；复盘出牌区展示恒为同集合重排。"""
+    import replay_ui
+    record, _ = _make_record(7)
+    plays = [a for a in record["actions"] if a["kind"] == "play"]
+    assert plays and all("ctype" in a for a in plays)
+    lvl = int(record["levels"]["0"])
+    n = 0
+    for a in plays:
+        if a.get("round", 1) != 1:
+            continue
+        cards = [replay_ui._CARD_BY_EID[e] for e in a["eids"]]
+        ordered = replay_ui.display_order(cards, lvl, replay_ui._action_combo(a))
+        assert {c.eid for c in ordered} == set(a["eids"])
+        n += 1
+    assert n > 0
+
+
 def test_explain_choice_returns_text():
     import ai
     g = GuandanGame(rng=random.Random(9))

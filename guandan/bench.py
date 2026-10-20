@@ -15,7 +15,7 @@
 
 配置双通道（--a/--b）：
 - 注册策略 sid（推荐）：registry.ids()，当前 classic_low / classic_high /
-  pimc / novice / intermediate / advanced；设置界面三档 = 后三者，
+  pimc / novice / intermediate / advanced / value；设置界面四档 = 后四者，
   classic 与 pimc 保留仅供 bench/测试调用；
 - 细粒度 token（A/B 调参）：``basic`` | ``enh``，可叠加 ``+mem_lead``
   ``+urgent_top`` ``+feed``（见 ai.py 模块头）。调参改 Weights/Budget 后
@@ -504,7 +504,8 @@ def show_sids() -> None:
     for sid in registry.ids():
         spec = registry.get(sid)
         tier = "（设置界面档位）" if sid in ("novice", "intermediate",
-                                            "advanced") else "（仅 bench/测试）"
+                                            "advanced",
+                                            "value") else "（仅 bench/测试）"
         print(f"  {sid:<14} {spec.name:<6} {tier}")
         print(f"  {'':<14} {spec.desc}")
     print("== 细粒度 token（调参通道）==")

@@ -394,10 +394,18 @@ def score_move_detail(game, pid: int, move: Combo, ctx: dict,
                 add("tempo", -40)
 
     # 阶段四 inference 实装：risk / gain_team 团队送牌（默认系数 0 →
-    # 本块整体短路，经典档评分逐字节不变，阶段六经 bench 校准后启用）
+    # 本块整体短路，经典档评分逐字节不变）。阶段六起仅 advanced 启用
+    # team_feed_lead=1.0（其特性集不含 feed 硬覆盖，评分式协同才可达——
+    # 修复 2026-10-20 发现的遮蔽问题：原 advanced 同时带 feed 硬覆盖与
+    # 本评分，触发窗口被 _feed_teammate 提前 return 完全遮蔽，从未生效）。
+    # can_finish 守卫与 _feed_teammate 同口径：本步能出完时不送牌，防
+    # 一手出完的低单被 -30 惩罚（ctx 缺该键=手工构造 ctx 的旧调用者，
+    # 行为同前）。
     weights = ctx.get("weights")
     if weights is not None and (weights.risk or weights.team_feed_lead):
-        if weights.team_feed_lead and ctx["leading"] and strategy.feed_helps(game, pid):
+        if weights.team_feed_lead and ctx["leading"] \
+                and not ctx.get("can_finish") \
+                and strategy.feed_helps(game, pid):
             # 领出低单（不含级牌/王/逢人配）给对家报牌者留压牌机会
             plain_pv = [point_value(c.rank, level) for c in move_cards
                         if not c.is_wild(level)]
@@ -508,6 +516,8 @@ def choose_action_detail(game, pid: int,
     # 残局锁定仅随 enhanced 启用，避免 mem_lead 单开时混入残局行为干扰 A/B 归因
     moves = endgame_search(moves, game, pid, mem if enhanced else None,
                            threshold=end_hand)
+    # 本步能否一手出完（gain_team 评分守卫用，与 _feed_teammate 同口径）
+    ctx["can_finish"] = any(len(m.cards) == game.hand_count(pid) for m in moves)
 
     feed = _feed_teammate(moves, game, pid, ctx)
     if feed is not None:

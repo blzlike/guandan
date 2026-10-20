@@ -5,7 +5,7 @@
   "level_start": 2,
   "sound": true,
   "bgm": "track1",
-  "ai_strength": "advanced",
+  "ai_strength": "value",
   "teaching": true,
   "net_name": "JianW"
 }

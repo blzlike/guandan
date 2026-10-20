@@ -70,7 +70,65 @@ def test_registry_equivalence_high_and_low():
 
 def test_registry_registered_ids():
     assert ids() == ["classic_low", "classic_high", "pimc",
-                     "novice", "intermediate", "advanced"]
+                     "novice", "intermediate", "advanced", "value"]
+
+
+# ---------------------------------------------------------------- 分级档独立性
+_TIER_DIFF_SEEDS = (0, 6, 9, 1)     # 已知出现决策差异的 seed（2026-10-20）
+
+
+def _tier_first_diff_step(seed: int) -> int:
+    """advanced 与 classic_high 同局面逐步对比，返回首个不同决策步数
+    （0=整场无差异）。动作相同才前进，两局状态保持同步。"""
+    g1 = GuandanGame(rng=random.Random(seed))
+    g2 = GuandanGame(rng=random.Random(seed))
+    steps = 0
+    while g1.phase != "match_over":
+        if g1.phase == "round_over":
+            g1.start_next_round()
+            g2.start_next_round()
+            continue
+        if g1.phase == "tribute":
+            pending = [(gv, r) for gv, r in g1.tribute_pairs
+                       if gv not in g1.tribute_done]
+            if pending:
+                g1.submit_tribute(pending[0][0],
+                                  choose_tribute(g1, pending[0][0]))
+                g2.submit_tribute(pending[0][0],
+                                  choose_tribute(g2, pending[0][0]))
+            else:
+                rcv = next(r for r in g1.tribute_done.values()
+                           if r not in g1.return_done)
+                g1.submit_return(rcv, choose_return(g1, rcv))
+                g2.submit_return(rcv, choose_return(g2, rcv))
+            continue
+        pid = g1.turn
+        a1 = strategy_choose(g1, pid, AIProfile(), "advanced")
+        a2 = strategy_choose(g2, pid, AIProfile(), "classic_high")
+        steps += 1
+        k1 = (a1[0], tuple(c.eid for c in (a1[1] or [])))
+        k2 = (a2[0], tuple(c.eid for c in (a2[1] or [])))
+        if k1 != k2:
+            return steps
+        for g, a in ((g1, a1), (g2, a2)):
+            if a[0] == "play":
+                g.play(pid, a[1])
+            else:
+                g.pass_play(pid)
+    return 0
+
+
+def test_advanced_synergy_differs_from_classic_high():
+    """协同修复回归（2026-10-20）：advanced（评分式协同，特性集无 feed
+    硬覆盖）与 classic_high（保留硬覆盖）不再逐字节等价（修复前 40 场
+    25999 决策 0 差异）。其余档位独立性由
+    test_registry_equivalence_high_and_low / test_plan_b 回归锁定。"""
+    got = 0
+    for seed in _TIER_DIFF_SEEDS:
+        got = _tier_first_diff_step(seed)
+        if got:
+            break
+    assert got, "advanced 与 classic_high 决策仍逐字节等价（协同评分未生效）"
 
 
 # ---------------------------------------------------------------- clone

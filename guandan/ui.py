@@ -12,7 +12,9 @@
   超过报牌阈值显示「未报数」）；每人一个出牌分区（全部位于中央出牌矩形内，
   互不重叠）。
 - 中央出牌区：从对家到手牌区、上家到下家之间的矩形；每轮打出的牌横排显示在
-  各家分区，展示牌高度为手牌牌高的 3/4（各家统一、不压缩牌宽）；上家展示从
+  各家分区（牌序按 rules.display_order 统一规范：序列类点数升序、配牌占
+  顶替位，三带二三张在前，同点黑红梅方，与复盘回放一致），展示牌高度为
+  手牌牌高的 3/4（各家统一、不压缩牌宽）；上家展示从
   分区左缘开始、下家贴分区右缘，牌多时缩小间距堆叠（不遮挡头像）；轮到某家
   出牌时清除该家上一轮展示；一轮结束（各家均不出）后整体保留 1.5s 再清场，
   保证「不出」文字可见；进贡/还贡共用按钮居中显示；抗贡时在对应玩家分区显示
@@ -22,14 +24,18 @@
   「进贡/还贡」按钮（置于我方分区中央，即原徽章中点），不显示徽章与按钮。
 - 局终：出牌区显示头游/二游/三游/末游（一方两家出完时其余两家均记末游）+
   「X方胜，下局打X」结算 + 下一局/主界面。
-- 底部：手牌区（右缘至「整理手牌」按钮左侧；无底色；炸弹/同花顺组在左、
+- 底部：手牌区（右缘至右侧竖列按钮左侧；无底色；炸弹/同花顺组在左、
   普通手牌按点数分列居中、非炸弹牌组在右；列内纵向重叠仅露出每张牌角标，
   同点列从下到上按黑桃/红桃/梅花/方块排列；牌面尺寸按「6 张一列恰好到
   出牌区下沿」锁定，不随列长变化，7 炸可向上突破，整体过宽时列间水平重叠）。
-- 右侧竖列（原出牌按钮位置）：整理手牌 / 恢复手牌按钮（宽为原出牌按钮 2/3、
-  右缘齐平，两按钮间距为按钮高度之半）与同花顺识别框（距恢复手牌按钮下沿
-  两个按钮高度、高与宽相等的正方形框，两列矩形格、每列两个花色，黑边框、
-  实心/空心花色，框内仅显示花色符号、字形高=框整体高度的一半）自上而下排列；
+- 右侧竖列（原出牌按钮位置）：整理/恢复手牌合并按钮、「教学」按钮（宽均为
+  原出牌按钮 2/3、右缘齐平，高度=出牌按钮高度，间距=高度之半；教学按钮在
+  原「恢复手牌」位置）与同花顺识别框（距教学按钮下沿两个按钮高度、高与宽
+  相等的正方形框，两列矩形格、每列两个花色，黑边框、实心/空心花色，框内仅
+  显示花色符号、字形高=框整体高度的一半）自上而下排列；合并按钮随选中状态
+  切换文字与激活态（2026-10-19）：未选中=无整理组时「整理手牌」（灰）/
+  有整理组时「恢复手牌」（全部恢复）；选中已整理组=「恢复手牌」（仅恢复
+  所选组）；选中构成合法牌型=「整理手牌」；其余选中=「整理手牌」（灰）。
   程序图标为根目录 logo.png。
 
 牌面：白底圆角；级牌浅绿填充、文字花色为常规红黑配色；中央花色图案宽约牌面
@@ -42,7 +48,7 @@
 字号为按钮高度 60%，按下有下沉动画。全部按窗口尺寸自适应。
 
 设置页：仅可调整项——报牌阈值、低牌提示、音效开关、背景乐选择（关/曲目一/
-曲目二）、AI 牌力（初级/中级/高级单选）；控件尺寸随窗口高度比例缩放。
+曲目二）、AI 牌力（初级/中级/高级/夯级单选）；控件尺寸随窗口高度比例缩放。
 入口在主菜单（牌桌不再有设置按钮），保存/返回均回主菜单。
 
 主菜单：启动初始屏——单机游戏 / 好友组局 / 设置 / 复盘 / 退出游戏；单机
@@ -81,10 +87,11 @@ from arrange import HandManager
 from cards import BIG_JOKER, Card, Suit, RANK_LABELS
 from game import GameError, GuandanGame, IllegalPlayError, NotPlayerTurnError
 from replay import Recorder, apply_net_act
+import calib
 import decision
 import observer
 import scorer
-from rules import can_play
+from rules import can_play, classify, display_order
 from sound import SoundManager, event_for_combo
 
 # 扑克花色符号（Windows 下 msyh 缺 ♠♥♣♦ 字形，用 Segoe UI Symbol 渲染；
@@ -151,10 +158,10 @@ DEFAULT_SETTINGS = {
     "level_start": 2,
     "sound": True,          # 音效开关（播放接口，暂无音频文件）
     "bgm": "track1",        # 背景乐默认播放曲目一：off | track1 | track2
-    "ai_strength": "advanced",  # AI 牌力默认高级：novice | intermediate | advanced
-                               # （classic_low/classic_high/pimc 保留在 registry
-                               #   供 bench/测试调用，不再进入设置界面）
-    "teaching": True,       # 教学面板：数据显示 + 出牌建议（左缘「教学」按钮展开）
+    "ai_strength": "advanced",  # AI 牌力默认高级：novice | intermediate |
+                               # advanced | value（classic_low/classic_high/pimc
+                               # 保留在 registry 供 bench/测试调用，不进设置界面）
+    "teaching": True,       # 教学面板：数据显示 + 出牌建议（右列「教学」按钮展开）
     "net_name": "",         # 好友联机昵称（大厅页使用，可留空自动起默认名）
 }
 
@@ -178,7 +185,8 @@ def load_settings() -> dict:
     _legacy = {"low": "novice", "high": "advanced", "pimc": "advanced"}
     if data["ai_strength"] in _legacy:
         data["ai_strength"] = _legacy[data["ai_strength"]]
-    elif data["ai_strength"] not in ("novice", "intermediate", "advanced"):
+    elif data["ai_strength"] not in ("novice", "intermediate", "advanced",
+                                     "value"):
         data["ai_strength"] = "advanced"
     return data
 
@@ -196,7 +204,7 @@ class FlatButton(Widget):
     """圆角矩形按钮：圆角 + 底部厚度（3D）+ 顶部高光，按下有下沉动画。"""
 
     def __init__(self, text: str, color, on_press: Callable,
-                 enabled=True, text_color=(1.0, 1.0, 1.0), **kw):
+                 enabled=True, text_color=(1.0, 1.0, 1.0), font_size=None, **kw):
         kw.setdefault("size_hint", (None, None))
         super().__init__(**kw)
         self.text = text
@@ -204,6 +212,7 @@ class FlatButton(Widget):
         self.enabled = enabled
         self.base_color = color
         self.text_color = tuple(text_color[:3])
+        self._font_fs = int(font_size) if font_size else None   # 显式字号（不传=按尺寸自算）
         self._pressed = False
         self._press_y: Optional[float] = None
         init_c = color if enabled else (0.45, 0.45, 0.45, 1)
@@ -242,9 +251,10 @@ class FlatButton(Widget):
         self._top.radius = rad
         self._label.pos = (x, y + th)
         self._label.size = (w, h - th)
-        # 字号为按钮高度 60%（长文本按宽度收敛，防止溢出）
+        # 字号为按钮高度 60%（长文本按宽度收敛，防止溢出）；显式 font_size 优先
         est = sum(1.0 if ord(ch) > 0x2E80 else 0.55 for ch in self.text) or 1.0
-        self._label.font_size = max(9, int(min(h * 0.60, w * 0.94 / est)))
+        fs = self._font_fs if self._font_fs else h * 0.60
+        self._label.font_size = max(9, int(min(fs, w * 0.94 / est)))
 
     def set_enabled(self, val: bool):
         self.enabled = val
@@ -602,6 +612,7 @@ class TableScreen(Screen):
         self._tribute_hold_until = 0.0   # 贡牌展示保留期截止时刻
         self._recorder = None            # 牌局记录（结算打分数据源，见 scorer）
         self._decisions = None           # 决策快照记录器（decision.DecisionLogger）
+        self._calib = None               # 夯级校准检测（calib.CalibrationChecker）
         self._replay_saved_path = None   # 本场复盘文件已保存路径（重复保存覆盖）
         self._scores = None              # 打分缓存 {pid: 0-100}（跃迁帧算一次）
         self._prev_trick: Dict[int, dict] = {}    # 上次刷新时的各家出牌展示
@@ -847,14 +858,16 @@ class TableScreen(Screen):
         y2 = int(self.P_LAYOUT[3]["count"][1] * H) - gap
         if self._teach_open:
             self._draw_teach_panel(x1, y1, x2 - x1, y2 - y1, gap)
-        # 切换按钮：教学区上方（上家「未报数」行竖直中线），右沿与面板右沿对齐
-        bw, bh = int(0.075 * W), max(30, int(0.048 * H))
-        cy = int((self.P_LAYOUT[3]["count"][1] + self.P_LAYOUT[3]["count"][3]) / 2 * H)
+        # 切换按钮：右侧竖列原「恢复手牌」位置（几何与整理/恢复合并按钮一致，
+        # 由 _build_sf_strip 提供，尺寸/文字参照其设计；2026-10-19 用户规格）
+        geo = getattr(self, "_sf_geo", None)
+        if geo is None:
+            return
+        bx, by, bw, bh = geo
         self.add_widget(FlatButton("收起" if self._teach_open else "教学",
                                    GREEN, self._toggle_teaching,
                                    text_color=(1, 1, 1, 1),
-                                   pos=(x2 - bw - 6, cy - bh // 2),
-                                   size=(bw, bh)))
+                                   pos=(bx, by), size=(bw, bh)))
 
     def _draw_teach_panel(self, x1, y1, pw, ph, gap):
         """9 行三模块网格：1-2 核心牌剩余 / 3-6 已出牌型 / 7-9 推测预留。
@@ -1038,7 +1051,9 @@ class TableScreen(Screen):
                 # 轮到该家出牌时不画其旧展示（下方清除），否则旧牌会被缩小上移
                 d = displays[pid]
                 if d["action"] == "play":
-                    self._draw_mini(d["combo"].cards, zone, up=up, align=align)
+                    self._draw_mini(display_order(d["combo"].cards, g.level,
+                                                  d["combo"]),
+                                    zone, up=up, align=align)
                 else:
                     self._zone_label(zone, "不  出", size=self._text_fs(), up=up)
                 shown = True
@@ -1316,10 +1331,10 @@ class TableScreen(Screen):
             c = mgr.card_by_eid(col[k])
             self._add_hand_card(c, cx, base_y + k * step, cw, ch, mgr)
 
-    # ---- 右侧竖列（原出牌按钮位置）：整理手牌 / 恢复手牌 / 同花顺框
-    # （按钮宽为原出牌按钮 2/3、右缘与其右缘齐平；按钮高度=出牌按钮高度；
-    #   恢复手牌下沿位置不变、向上增高，两按钮间距保持原值（半旧高度）；
-    #   同花顺框距恢复手牌按钮下沿 2 个旧按钮高度，高=宽的正方形框）
+    # ---- 右侧竖列（原出牌按钮位置）：整理/恢复合并按钮 / 教学按钮位 / 同花顺框
+    # （按钮宽为原出牌按钮 2/3、右缘齐平；按钮高度=出牌按钮高度；
+    #   合并按钮在原「整理手牌」位置、教学按钮占原「恢复手牌」位置，两按钮
+    #   间距保持原值（半旧高度）；同花顺框位置不变）
     def _build_sf_strip(self):
         W, H = Window.width, Window.height
         hs = int(0.045 * H)                     # 旧控件高度（间距/同花顺框定位基准）
@@ -1331,13 +1346,14 @@ class TableScreen(Screen):
         GRN_SF = (0.80, 0.93, 0.80, 1)          # 同花顺框填充（与开新局按钮同色）
         # 原出牌按钮：_rect(0.875, 0.280, 0.980, 0.380)
         x = int(0.980 * W) - w                  # 右缘齐平
-        y2 = int(0.380 * H) - 2 * hs - gap      # 恢复手牌下沿 = 原位置不变
-        self.add_widget(FlatButton("恢复手牌", YEL, self._on_restore,
-                                   text_color=YEL_TXT, pos=(x, y2), size=(w, nh)))
-        y = y2 + gap + nh                       # 整理手牌下沿 = 恢复上沿 + 原间距
-        self.add_widget(FlatButton("整理手牌", YEL, self._on_arrange,
-                                   text_color=YEL_TXT, pos=(x, y), size=(w, nh)))
-        # 同花顺框：距恢复手牌按钮下沿 2 个旧按钮高度；正方形（高=宽），
+        y2 = int(0.380 * H) - 2 * hs - gap      # 原「恢复手牌」位（现教学按钮位）
+        self._sf_geo = (x, y2, w, nh)           # 教学按钮几何（_build_teaching 读取）
+        y = y2 + gap + nh                       # 合并按钮下沿 = 教学位上沿 + 原间距
+        self._btn_sort = FlatButton("整理手牌", YEL, self._on_sort_btn,
+                                    text_color=YEL_TXT, pos=(x, y), size=(w, nh))
+        self.add_widget(self._btn_sort)
+        self._sync_sort_btn()
+        # 同花顺框：距教学按钮下沿 2 个旧按钮高度；正方形（高=宽），
         # 两列×每列两花色（列1=黑桃/红桃，列2=梅花/方块），
         # 黑边框 + 浅绿填充（与开新局按钮同色）（图标后添加，绘制在填充之上）；
         # 框内仅显示花色符号（不显示候选数字），字形高=框高的 35%
@@ -1361,6 +1377,32 @@ class TableScreen(Screen):
                                      pos=(int(x + coli * slot_w),
                                           int(y3 + (1 - rowi) * slot_h)),
                                      size=(int(slot_w), int(slot_h))))
+
+    # ---- 整理/恢复合并按钮：随选中状态切换文字与激活态（2026-10-19 用户规格：
+    #      未选中=无整理组「整理手牌」灰/有整理组「恢复手牌」；选中已整理组=
+    #      「恢复手牌」仅恢复所选组；选中合法牌型=「整理手牌」；其余=「整理手牌」灰）
+    def _sort_btn_state(self) -> Tuple[str, bool]:
+        mgr = self.mgr
+        if mgr.selected:
+            if mgr.groups and mgr.selected <= mgr._grouped_eids():
+                return "恢复手牌", True
+            return "整理手牌", bool(classify(mgr.selected_cards(), mgr.level))
+        return ("恢复手牌", True) if mgr.groups else ("整理手牌", False)
+
+    def _sync_sort_btn(self):
+        btn = getattr(self, "_btn_sort", None)
+        if btn is None:
+            return
+        text, enabled = self._sort_btn_state()
+        if btn.text != text:
+            btn.set_text(text)
+        btn.set_enabled(enabled)
+
+    def _on_sort_btn(self):
+        if self._sort_btn_state()[0] == "恢复手牌":
+            self._on_restore()
+        else:
+            self._on_arrange()
 
     # ---- 出牌 / 不出 按钮：对称排布在我方出牌区行动徽章两侧（水平中线对齐，
     # 不出在左、出牌在右），高度与徽章相同、距徽章两侧一个徽章宽度；
@@ -1418,6 +1460,7 @@ class TableScreen(Screen):
                 wid.selected = desired
                 wid._redraw()
         self._sync_action_buttons()
+        self._sync_sort_btn()
 
     def on_touch_down(self, touch):
         wid = self._hand_card_at(touch.pos)
@@ -1526,6 +1569,9 @@ class TableScreen(Screen):
         if self._decisions is not None:
             self._decisions.detach(self.game)
         self._decisions = None
+        if self._calib is not None:
+            self._calib.detach(self.game)
+        self._calib = None
         self._replay_saved_path = None
         self._scores = None
         rec = Recorder(seed=self.app.seed)
@@ -1537,6 +1583,12 @@ class TableScreen(Screen):
         logger = decision.DecisionLogger(seed=self.app.seed)
         if logger.attach(self.game):
             self._decisions = logger
+            # 夯级校准检测（value 档步骤③）：随快照记录器在比赛起点挂载，
+            # round_end 对照校准常量；仅当本局出现 sid=value 快照才落
+            # review 标记（无夯级快照静默跳过，内部守卫异常不外抛）
+            self._calib = calib.CalibrationChecker(seed=self.app.seed,
+                                                   store=logger.store)
+            self._calib.attach(self.game)
 
     def _attach_tracker(self):
         """在比赛起点挂教学数据跟踪（observer.PlayTracker）；非起点静默放弃。"""
@@ -1745,7 +1797,8 @@ class TableScreen(Screen):
                     candidates=detail["candidates"] if detail else None,
                     n_candidates=detail["n_candidates"] if detail else 0,
                     search_depth=_cost.get("search_depth", 0),
-                    n_rollouts=_cost.get("n_rollouts", 0))
+                    n_rollouts=_cost.get("n_rollouts", 0),
+                    context=(detail or {}).get("context"))
             if kind == "play":
                 combo = g.play(pid, cards)
                 self.app.sounds.play(event_for_combo(combo))
@@ -1986,7 +2039,7 @@ class TableScreen(Screen):
 class SettingsScreen(Screen):
     """设置页：报牌张数 / 6张提示 / 音效 / 背景乐 / AI 牌力 / 教学面板。
 
-    AI 牌力为三档单选（初级/中级/高级），下方附各档算法特点简述；经典档
+    AI 牌力为四档单选（初级/中级/高级/夯级），下方附各档算法特点简述；经典档
     classic_low/classic_high 与夯档 pimc 保留在 registry 供 bench/测试调用，
     不再进入设置界面。座位策略覆盖已废除，全部 AI 座位跟随全局档位。
     全部控件尺寸按窗口高度比例缩放，保证安卓高分屏与桌面窗口上字号同样清晰。
@@ -2066,11 +2119,11 @@ class SettingsScreen(Screen):
         r4 = row()
         r4.add_widget(_label("AI 牌力：", size=fs, halign="left",
                              size_hint=(0.30, 1)))
-        # 三档单选（单选按钮组）：经典 低/高/夯 与座位覆盖已退出设置界面，
-        # 底层策略保留在 registry 供 bench/测试调用；保存后下一手 AI 即生效。
+        # 四档单选（单选按钮组）：经典 低/高/夯 已退出设置界面，底层策略
+        # 保留在 registry 供 bench/测试调用；保存后下一手 AI 即生效。
         STRENGTH_OPTIONS = [("初级", "novice"), ("中级", "intermediate"),
-                            ("高级", "advanced")]
-        self.ai_choice = s["ai_strength"]      # load_settings 已迁移为三档之一
+                            ("高级", "advanced"), ("夯级", "value")]
+        self.ai_choice = s["ai_strength"]      # load_settings 已迁移为合法档
         for txt, val in STRENGTH_OPTIONS:
             cb = CheckBox(group="ai_strength", active=(self.ai_choice == val),
                           size_hint=(None, 1), width=cw)
@@ -2083,7 +2136,8 @@ class SettingsScreen(Screen):
         r4b = row()
         r4b.add_widget(_label(
             "初级：基础规则引擎，轻量快速｜中级：记牌器+报牌压制｜"
-            "高级：全特性+领出协同评分+深残局搜索",
+            "高级：全特性+领出协同评分+深残局搜索｜夯级：胜利值公式"
+            "（牌力×压制×对家增益×终局乘数）",
             size=int(fs * 0.62), halign="left", valign="middle",
             size_hint=(1, 1), color=(0.78, 0.78, 0.78, 1)))
 
@@ -2093,7 +2147,7 @@ class SettingsScreen(Screen):
         self.teach_cb = CheckBox(active=bool(s.get("teaching", True)),
                                  size_hint=(None, 1), width=cw)
         r5.add_widget(self.teach_cb)
-        r5.add_widget(_label("开启（牌桌左缘「教学」按钮）", size=fs,
+        r5.add_widget(_label("开启（牌桌右列「教学」按钮）", size=fs,
                              halign="left", size_hint=(0.42, 1)))
 
         # 保存/返回同排：高度 1.5 倍行高、宽高比 3:2，整排居中
@@ -2112,7 +2166,7 @@ class SettingsScreen(Screen):
                                       size_hint=(None, 1), width=bw2))
 
     def _set_ai(self, val):
-        """单选按钮回调：记录当前 AI 牌力档（novice/intermediate/advanced）。"""
+        """单选按钮回调：记录当前 AI 牌力档（novice/intermediate/advanced/value）。"""
         self.ai_choice = val
 
     def _on_save(self):
@@ -2127,7 +2181,7 @@ class SettingsScreen(Screen):
         for cb, val in self.bgm_cbs:
             if cb.active:
                 s["bgm"] = val
-        s["ai_strength"] = self.ai_choice     # 三档单选（novice/intermediate/advanced）
+        s["ai_strength"] = self.ai_choice     # 四档单选（novice/intermediate/advanced/value）
         s["teaching"] = bool(self.teach_cb.active)
         s.pop("seats", None)                  # 座位策略覆盖已废除，清除旧配置残留
         save_settings(s)
