@@ -116,6 +116,10 @@ else:
             _CJK_FONT = _f
             break
     _SYM_FONT = r"C:\Windows\Fonts\seguisym.ttf"
+# 决策快照面板仿宋字体（Windows simfang；缺失时回退当前 CJK 字体）
+_FS_FONT = r"C:\Windows\Fonts\simfang.ttf"
+if not os.path.exists(_FS_FONT):
+    _FS_FONT = _CJK_FONT
 if os.path.exists(_SYM_FONT):
     LabelBase.register("suitfont", _SYM_FONT)
 
@@ -204,7 +208,8 @@ class FlatButton(Widget):
     """圆角矩形按钮：圆角 + 底部厚度（3D）+ 顶部高光，按下有下沉动画。"""
 
     def __init__(self, text: str, color, on_press: Callable,
-                 enabled=True, text_color=(1.0, 1.0, 1.0), font_size=None, **kw):
+                 enabled=True, text_color=(1.0, 1.0, 1.0), font_size=None,
+                 font_name=None, **kw):
         kw.setdefault("size_hint", (None, None))
         super().__init__(**kw)
         self.text = text
@@ -223,7 +228,8 @@ class FlatButton(Widget):
             self._bd = RoundedRectangle(pos=self.pos, size=self.size, radius=[10])
             self._top_c = Color(*init_c)
             self._top = RoundedRectangle(pos=self.pos, size=self.size, radius=[10])
-        self._label = Label(text=text, font_name=_CJK_FONT, bold=True,
+        self._label = Label(text=text, font_name=font_name or _CJK_FONT,
+                            bold=True,
                             font_size=16, color=self.text_color + (1 if enabled else 0.4,),
                             markup=True, halign="center", valign="middle")
         self._label.bind(size=self._label.setter("text_size"))
@@ -565,11 +571,12 @@ class Panel(Widget):
         self._bd.rounded_rectangle = (x, y, w, h, rad)
 
 
-def _label(text, size=16, color=(1, 1, 1, 1), bold=False, widget_size=None, **kw):
+def _label(text, size=16, color=(1, 1, 1, 1), bold=False, widget_size=None,
+           font_name=None, **kw):
     kw.setdefault("halign", "center")
     kw.setdefault("valign", "middle")
-    lb = Label(text=text, font_name=_CJK_FONT, font_size=size, bold=bold,
-               color=color, markup=True, **kw)
+    lb = Label(text=text, font_name=font_name or _CJK_FONT, font_size=size,
+               bold=bold, color=color, markup=True, **kw)
     if widget_size is not None:
         lb.size_hint = (None, None)
         lb.size = widget_size

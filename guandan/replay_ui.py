@@ -42,7 +42,6 @@ from kivy.uix.screenmanager import Screen
 from cards import RANK_LABELS, build_deck, point_value, sort_key
 from decision import DecisionStore, format_snapshot_summary
 from replay import ReplaySession, load_json
-from review import CATEGORIES, VERDICTS, VERDICT_LABELS, ReviewStore
 from rules import Combo, HandType, display_order
 
 # 可写目录（与 ui.py settings.json 同套 frozen 规则：exe 旁 / 源码目录旁）
@@ -233,10 +232,6 @@ class ReplayScreen(Screen):
         self.view_trick: Optional[int] = None    # 出牌区显示轮次；None=自动
         self._snap_map: Dict[str, dict] = {}     # decision_id → 决策快照
         self._snap_view: Optional[dict] = None   # 候选对比面板当前快照
-        self._review_open: Optional[dict] = None  # 校核表单当前快照（阶段五）
-        self._review_msg = ""                    # 校核表单一次性提示
-        self._review_draft = {"category": CATEGORIES[4], "verdict": "improvable",
-                              "to_regression": False}
         Window.bind(on_resize=self._on_win_resize)
 
     # ------------------------------------------------------------ 导航
@@ -255,8 +250,6 @@ class ReplayScreen(Screen):
             self._build_replay()
             if self._snap_view is not None:
                 self._build_snapshot_panel(self._snap_view)
-                if self._review_open is not None:
-                    self._build_review_form(self._review_open)
         # 列表↔回放为纯组件树变化，无 _pump 帧源；Kivy 仅在 window canvas
         # 脏时出帧（base.py EventLoop.idle），必须显式标脏否则黑屏
         Window.canvas.ask_update()
@@ -273,8 +266,6 @@ class ReplayScreen(Screen):
         self.view_trick = None
         self._snap_map = {}
         self._snap_view = None
-        self._review_open = None
-        self._review_msg = ""
         self._msg = ""
         self._rebuild()
 
@@ -298,8 +289,6 @@ class ReplayScreen(Screen):
         self._stop_auto()
         self.view_trick = None
         self._snap_view = None
-        self._review_open = None
-        self._review_msg = ""
         try:
             rec = load_json(path)
             self.session = ReplaySession(rec)
@@ -322,22 +311,32 @@ class ReplayScreen(Screen):
         self._rebuild()
 
     def _build_snapshot_panel(self, snap: dict):
-        """候选对比覆盖面板（2026-10-20 用户定调试三区布局）：
+        """候选对比覆盖面板（2026-10-21 用户定快照面板规格）：
 
-        - 标题行（居中）+ value 档局面参数行；删除座位/最终两行信息；
-        - 左区（贴左边缘）三表并排：控制构成（副题「基础方案」，各手
-          控制值+总控制）、手牌清单（出牌前/出牌后，行=类型短名+点数串
-          如 炸弹7777/三二55544，10→X、逢人配→$；旧档回退点数串/资源
-          标签；均按最大牌力组合，出牌后数据源 context.after_groups，
-          旧档显示无明细），出牌前表页脚「非炸手数」、出牌后表页脚
-          「非炸手数/出牌后牌力」，三表下方汇总行「当前牌力 → 出牌后」；
+        - 标题行（居中，盒宽避开右上关闭钮）+ value 档局面参数行；
+        - 左区（左边沿距不变）两表并排：「手牌清单（前）/（后）」单行
+          表头 + 三列=牌型｜手数｜控制（desc 类型短名+点数串，10→X、
+          逢人配→$；手数火牌=—其余 1；控制 .3f，数据源 context.
+          cur_groups / after_groups，旧档显示无明细），页脚两行=总控制｜
+          合计（非炸手数+牌力同行）加粗加黄、固定贴表格区下沿始终可见；
+          两表与候选表之间等距（左右边沿距不变，放不下时压牌型列）；
         - 右列候选分项表（value=4 因子+胜利值 6 列，列宽按内容自适应、
-          列距 1 字符、右贴快照框右沿；经典档 9 列固定比例不变）；
-        - 整页字号 =「下一步」字号的 2/3；底部贴底四因子公式块，字号 =
-          当前字号的 1/2；校核/关闭钮随字号。
+          列距 1 字符、右贴快照框右沿；表头固定、说明行删除，数据行入
+          滚动区，行多时显示滚动条；经典档 9 列固定比例截断不变）；
+        - 整页文字（含备注）仿宋，字号=关闭按钮文字 80%（底部公式备注
+          栏仍为表格 60% 不变）；关闭钮移右上角（距上/右边界各 1 字宽，
+          不影响标题行文字），校核钮及其表单删除；公式栏贴底边（间隔半
+          个字高）、左右边界距面板左右边沿各 2 字宽，公式以「；」相连
+          成段、超宽才换行。
         """
         from decision import format_candidates_table
-        from ui import BLUE, FlatButton, Panel, _label
+        from ui import BLUE, FlatButton, Panel, _FS_FONT, _label
+
+        def _fl(*args, **kw):
+            """快照面板标签：统一仿宋字体（2026-10-21 用户定）。"""
+            kw.setdefault("font_name", _FS_FONT)
+            return _label(*args, **kw)
+
         W, H = Window.width, Window.height
         DIM = (0.10, 0.11, 0.13, 0.55)
         self.add_widget(Panel(pos=(0, 0), size=(W, H), color=DIM,
@@ -347,13 +346,19 @@ class ReplayScreen(Screen):
         self.add_widget(Panel(pos=(px, py), size=(pw, ph),
                               color=(0.16, 0.17, 0.15, 0.98)))
         fs0 = _btn_font("下一步", int(0.078 * H) * 1.5, int(0.078 * H))
-        fs = max(11, int(fs0 * 2 / 3))           # 整页字号 = 原字号 2/3
-        lh = fs + 8                              # 文字行高（含行距）
+        fs = max(11, int(fs0 * 2 / 3))           # 基础字号（按钮尺寸推导用）
+        fts = max(11, int(fs * 1.5))             # 关闭钮文字字号（字高基准）
+        fz = max(11, int(fts * 0.8))             # 页面文字=关闭钮文字 80%
+        lh = fz + 8                              # 文字行高（含行距）
+        bh = int(max(int(0.052 * H), int(fs * 1.7))
+                 * 1.5)                          # 按钮（含文字）增大 50%
+        btn_w = int(bh * 1.5)
         y = py + ph - lh - 10
-        self.add_widget(_label(
+        # 标题行：盒宽左右对称避开关闭钮区，保持面板居中且不与钮相碰
+        self.add_widget(_fl(
             f"[b]决策快照[/b]  {snap.get('decision_id', '')}",
-            size=fs, pos=(px, y),
-            widget_size=(pw, lh), halign="center"))
+            size=fz, pos=(px + btn_w + fz, y),
+            widget_size=(pw - 2 * (btn_w + fz), lh), halign="center"))
         y -= lh + 4
         is_value = (snap.get("sid") or "") == "value"
         # 局面参数行（value 档）：压制/增益因子的局面级输入；旧档无
@@ -366,433 +371,322 @@ class ReplayScreen(Screen):
                 if ctx0.get("mate_est") else "—"
             acc = ctx0.get("mate_accept")
             acc_s = "" if acc is None else ("·可送" if acc else "·不可送")
-            self.add_widget(_label(
+            self.add_widget(_fl(
                 f"参数：对手手数(估) {opp_s} · 对家手数(估) {mate_s}{acc_s}",
-                size=fs, color=(0.85, 0.85, 0.80, 1),
+                size=fz, color=(0.85, 0.85, 0.80, 1),
                 pos=(px + int(0.03 * pw), y),
                 widget_size=(int(0.9 * pw), lh), halign="left"))
             y -= lh
         # 右列分项表按 sid 切列：value 档 6 列=候选|牌力 压制 增益 终局|
-        # 胜利值（基本参数在左区三表，列宽按内容自适应）；经典档 9 列
-        # 固定比例不变。表头下附备注行说明各列含义（字号自适应防溢出）。
+        # 胜利值（基本参数在左区两表，列宽按内容自适应）；经典档 9 列
+        # 固定比例不变。候选表头下说明行删除（2026-10-21 用户定）。
         rows = format_candidates_table(snap)
-        if is_value:
-            NOTE = ("▶=实际选择", "出牌后\n牌力", "压制\n对手", "队友\n配合",
-                    "终结\n乘数", "越高\n越优")
-        else:
+        if not is_value:
             col_fx = (0.03, 0.30, 0.42, 0.50, 0.58, 0.66, 0.74, 0.82, 0.90)
             col_w = [int(0.26 * pw), int(0.11 * pw)] + [int(0.075 * pw)] * 7
-            NOTE = ("▶=实际选择", "越低\n越优", "出牌\n收益", "队友\n配合",
-                    "压制\n对手", "节奏\n得失", "牌力\n消耗", "被压\n风险",
-                    "终结\n影响")
             tail = "总分越低越优；分项为对总分的贡献，负值=利好该动作"
-
-        def _tw(txt, size) -> int:
-            """文本宽估算（与 _btn_font 同口径：CJK 全宽、ASCII 0.55）。"""
-            return sum(size if ord(ch) > 0x2E80 else int(size * 0.55)
-                       for ch in str(txt))
 
         _rw_cache = {}
 
         def _rw(txt, size) -> int:
-            """真实渲染宽（CoreLabel 单行实测）：desc 行含宽字母（X/J/Q/K/
-            小王/大王），_tw 估算偏小会截断，改用实测（2026-10-20）。
+            """真实渲染宽（CoreLabel 单行实测，仿宋与面板一致）：desc 行
+            含宽字母（X/J/Q/K/小王/大王），估算偏小会截断（2026-10-20）。
             加粗行按上限预留余量。"""
             key = (str(txt), size)
             if key not in _rw_cache:
                 from kivy.core.text import Label as CoreLabel
-                from ui import _CJK_FONT
-                core = CoreLabel(font_name=_CJK_FONT, font_size=size)
+                core = CoreLabel(font_name=_FS_FONT, font_size=size)
                 _rw_cache[key] = int(core.get_extents(str(txt))[0] or 0)
             return _rw_cache[key] + int(size * 0.18) + 2
 
         if is_value:
-            # 列宽按内容自适应（表头/数据实测宽、备注按 nfs），列距=1 个
-            # 字符宽度，整表右贴快照框右沿（2026-10-20 用户定）。
-            raw = []
+            # 列宽按内容自适应（表头/数据实测宽），列距=1 个字符宽度，
+            # 整表右贴快照框右沿（2026-10-20/21 用户定）。
+            ws = []
             for ci in range(len(rows[0])):
-                w = _rw(rows[0][ci], fs)
+                w = _rw(rows[0][ci], fz)
                 for r in rows[1:]:
-                    w = max(w, _rw(r[ci], fs))
-                raw.append(w)
-            nfs = min(fs, int(min(raw) * 0.45))
-            ws = [max(raw[ci], max(_rw(ln, nfs)
-                                   for ln in NOTE[ci].split("\n")))
-                  for ci in range(len(raw))]
-            gap_c = max(6, int(0.55 * fs))       # 列距=1 个字符宽度
-            xr = px + pw - int(0.012 * pw)       # 右贴快照框右沿
+                    w = max(w, _rw(r[ci], fz))
+                ws.append(w)
+            gap_c = max(6, int(0.55 * fz))       # 列距=1 个字符宽度
+            xr = px + pw - int(0.012 * pw)       # 右贴快照框右沿（边距不变）
             xs = [0] * len(ws)
             for ci in range(len(ws) - 1, -1, -1):
                 xs[ci] = xr - ws[ci]
                 xr = xs[ci] - gap_c
         else:
-            nfs = min(fs, int(min(col_w) * 0.45))
             ws = col_w
             xs = [px + int(fx * pw) for fx in col_fx]
-        nh = int(nfs * 2.3) + 4                  # 备注行高（容两行）
-        rh = fs + 10
-        bh = max(int(0.052 * H), int(fs * 1.7))  # 底部按钮随字号增大
-        fbase = py + int(0.012 * H) + bh + 8     # 底注锚点（贴底）
-        if is_value:                             # 四因子公式：字号=当前 1/2
+        rh = fz + 10                             # 表格行高（随表格字号）
+        if is_value:                             # 四因子公式：字号=表格 60%
             FL = ("胜利值 = 牌力 × 压制 × 增益 × 终局",
                   "牌力 = 出牌后控制 ÷ (出牌后手数 + 1)，每组恒 1 手",
                   "压制 = 1 + Σ 被压概率 ÷ 对手估计手数^1.5",
                   "增益 = 1 + 对家减量 ÷ (对家估计手数 + 1)",
                   "终局 = 出完×5 · 阻断×3 · 用炸×2 · 送冲×2.5 连乘")
-            nff = max(9, fs // 2)
+            nff = max(9, int(fts * 0.6))         # 备注栏字号不变（2026-10-21）
             flh = nff + 4                        # 公式行高（单行）
-            bottom = fbase + len(FL) * flh + 6
+            # 公式以「；」相连成段，超宽才换行；左右边界距面板左右边沿
+            # 各 2 字宽（2026-10-21 用户定）
+            fx0 = px + 2 * fz
+            fx1 = px + pw - 2 * fz
+            max_fw = max(100, fx1 - fx0)
+            flines, cur = [], ""
+            for seg in FL:
+                cand = seg if not cur else cur + "；" + seg
+                if cur and _rw(cand, nff) > max_fw:
+                    flines.append(cur)
+                    cur = seg
+                else:
+                    cur = cand
+            if cur:
+                flines.append(cur)
+            # 单段公式超宽（窄窗）按字符再拆行（2026-10-21 用户定：溢出换行）
+            wrapped: List[str] = []
+            for ln in flines:
+                if _rw(ln, nff) <= max_fw:
+                    wrapped.append(ln)
+                    continue
+                cur2 = ""
+                for ch in ln:
+                    if cur2 and _rw(cur2 + ch, nff) > max_fw:
+                        wrapped.append(cur2)
+                        cur2 = ch
+                    else:
+                        cur2 += ch
+                if cur2:
+                    wrapped.append(cur2)
+            flines = wrapped
+            fy0 = py + nff // 2                  # 栏底贴底边，间隔半个字高
+            fbase = fy0 + len(flines) * flh + 8  # 表格区下沿=公式栏顶+8
         else:
-            bottom = py + int(0.012 * H) + bh + lh + 6
-        if is_value:                             # 左区三表并排（贴左边缘）
+            fbase = py + int(0.012 * H)
+        bottom = fbase
+        if is_value:                             # 左区两表并排（贴左边缘）
             ctx = snap.get("context") or {}
             groups = ctx.get("cur_groups") or []
             afters = ctx.get("after_groups")
-            gt = 6                               # 表间距（列宽自适应压紧）
-            ga_x = 6                             # 控制构成表 x
+            ga_x = 6                             # 左边沿距不变（2026-10-21）
             HEAD_C = (0.75, 0.78, 0.72, 1)
             BODY_C = (0.95, 0.95, 0.90, 1)
-            SUB_C = (0.65, 0.68, 0.62, 1)
+            HOT_C = (1.0, 0.90, 0.45, 1)         # 页脚两项：加粗加黄
 
-            def _col(x_off, w_lab, head, sub, trows, foot):
-                """单列小表：主/副两行表头 + (标签, 值) 行 + 页脚行；
-                行数超出可视高度截断；返回下一空行 y。"""
+            def _gdesc(g):
+                """牌型列文本：desc（类型短名+点数串）优先，旧档回退
+                点数串/资源标签+配/弱/×n 标记。"""
+                if g.get("desc"):
+                    return str(g["desc"])
+                if "cards" in g:
+                    return str(g["cards"])
+                lab = str(g.get("label", "?"))
+                if g.get("wild_used"):
+                    lab += "·配"
+                if g.get("weak"):
+                    lab += "·弱"
+                if g.get("n", 1) > 1 and "x" not in lab:
+                    lab += f"×{g['n']}"
+                return lab
+
+            def _rows3(glist):
+                """三列数据行：牌型 | 手数（火牌=—其余 1）| 控制（.3f，
+                2026-10-21 用户定牌力数据保留三位小数）。"""
+                return [(_gdesc(g), "—" if g.get("fire") else "1",
+                         f"{g.get('ctrl', 0.0):.3f}") for g in glist]
+
+            def _w3(rows3, foot3, head):
+                """列宽实测自适应：牌型列含页脚标签、手数/控制列含页脚
+                数值；不足单行表头宽时扩牌型列。"""
+                wd = max([_rw("牌型", fz), 36]
+                         + [_rw(r[0], fz) for r in rows3]
+                         + [_rw(f[0], fz) for f in foot3])
+                wn = max([_rw("手数", fz), 30]
+                         + [_rw(r[1], fz) for r in rows3]
+                         + [_rw(f[1], fz) for f in foot3])
+                wc = max([_rw("控制", fz), 36]
+                         + [_rw(r[2], fz) for r in rows3]
+                         + [_rw(f[2], fz) for f in foot3])
+                hw = _rw(head, fz)
+                if wd + wn + wc < hw:
+                    wd += hw - (wd + wn + wc)
+                return [wd, wn, wc]
+
+            def _col3(x_off, ws3, head, rows3, foot3, extra_foot=()):
+                """三列小表（牌型｜手数｜控制）：单行表头 + 列头 + 数据行
+                （超出可视高度截断让位）+ 页脚两行（总控制｜合计）加粗加
+                黄固定贴表格区下沿始终可见；extra_foot=页脚上方附加行
+                （如「已出完」）。表头单行不分行（2026-10-21 用户定）。"""
+                xd = px + x_off
+                xn = xd + ws3[0]
+                xc = xd + ws3[0] + ws3[1]
                 ty = y
-                self.add_widget(_label(
-                    f"[b]{head}[/b]", size=fs, color=HEAD_C,
-                    pos=(px + x_off, ty - rh),
-                    widget_size=(w_lab + c2, rh), halign="left"))
-                self.add_widget(_label(
-                    sub, size=nfs, color=SUB_C,
-                    pos=(px + x_off, ty - 2 * rh),
-                    widget_size=(w_lab + c2, rh), halign="left"))
-                ty -= 2 * rh
-                for lab, val in trows:
-                    if ty - rh < bottom:
-                        break
-                    self.add_widget(_label(
-                        lab, size=fs, color=BODY_C,
-                        pos=(px + x_off, ty - rh),
-                        widget_size=(w_lab, rh), halign="left"))
-                    self.add_widget(_label(
-                        val, size=fs, color=BODY_C,
-                        pos=(px + x_off + w_lab, ty - rh),
-                        widget_size=(c2, rh), halign="left"))
-                    ty -= rh
-                for lab, val in foot:
-                    self.add_widget(_label(
-                        lab, size=fs, color=HEAD_C,
-                        pos=(px + x_off, ty - rh),
-                        widget_size=(w_lab, rh), halign="left"))
-                    self.add_widget(_label(
-                        val, size=fs, color=HEAD_C,
-                        pos=(px + x_off + w_lab, ty - rh),
-                        widget_size=(c2, rh), halign="left"))
-                    ty -= rh
-                return ty
-
-            def _hand_rows(glist):
-                """手牌清单行：类型短名+点数串（desc，如 炸弹7777；旧档
-                回退点数串/资源标签+配/弱/×n 标记）+ 手数值（火牌=—，
-                其余恒 1，2026-10-20 用户定弱组不再加权）。"""
-                out = []
-                for g in glist:
-                    if g.get("desc"):
-                        lab = str(g["desc"])
-                    elif "cards" in g:
-                        lab = str(g["cards"])
-                    else:
-                        lab = str(g.get("label", "?"))
-                        if g.get("wild_used"):
-                            lab += "·配"
-                        if g.get("weak"):
-                            lab += "·弱"
-                        if g.get("n", 1) > 1 and "x" not in lab:
-                            lab += f"×{g['n']}"
-                    val = "—" if g.get("fire") else "1"
-                    out.append((lab, val))
-                return out
-
-            rows_a = [(str(g.get("desc") or g.get("label", "?")),
-                       f"{g['ctrl']:.2f}")
-                      for g in groups if g.get("ctrl", 0.0) > 0.0]
-            foot_a = [("总控制", f"{ctx.get('cur_control', 0) or 0:.2f}")]
-            rows_b = _hand_rows(groups)
-            foot_b = [("非炸手数", f"{ctx.get('cur_hands', 0) or 0:.1f}")]
-            if afters is None:                   # 旧档无出牌后明细
-                rows_c, foot_c = [("（无明细）", "")], []
-            else:
-                rows_c = _hand_rows(afters)
-                if ctx.get("finished"):
-                    foot_c = [("已出完", "—"), ("非炸手数", "—"),
-                              ("出牌后牌力", "—")]
-                else:
-                    foot_c = [("非炸手数",
-                               f"{ctx.get('after_hands', 0) or 0:.1f}"),
-                              ("出牌后牌力",
-                               f"{ctx.get('after_power', 0) or 0:.2f}")]
-            # 列宽按内容自适应（行格式=类型短名+点数串，实测宽防截断；
-            # 左区总宽不越候选表最左列，越界时标签列按比例压紧）
-            def _wlab(texts) -> int:
-                return max((_rw(t, fs) for t in texts), default=0)
-            wa = _wlab([r[0] for r in rows_a] + ["总控制"])
-            wb = _wlab([r[0] for r in rows_b] + ["非炸手数"])
-            wc = _wlab([r[0] for r in rows_c] + [f[0] for f in foot_c])
-            vals = [r[1] for r in rows_a + rows_b + rows_c] \
-                + [v for _, v in foot_a + foot_b + foot_c]
-            c2 = max(30, max((_rw(v, fs) for v in vals), default=0))
-            budget = xs[0] - px - ga_x - 2 * gt - 6   # 左区可用宽（留缝）
-            if wa + wb + wc + 3 * c2 > budget:
-                k = max(0.0, budget - 3 * c2) / (wa + wb + wc)
-                wa, wb, wc = (max(36, int(w * k)) for w in (wa, wb, wc))
-            gb_x = ga_x + wa + c2 + gt            # 手牌清单（出牌前）x
-            gc_x = gb_x + wb + c2 + gt            # 手牌清单（出牌后）x
-            ys = [_col(ga_x, wa, "控制构成", "基础方案", rows_a, foot_a)]
-            ys.append(_col(gb_x, wb, "手牌清单", "（出牌前）",
-                           rows_b, foot_b))
-            ys.append(_col(gc_x, wc, "手牌清单", "（出牌后）",
-                           rows_c, foot_c))
-            if afters is None:
-                tail_s = "无出牌后明细"
-            elif ctx.get("finished"):
-                tail_s = "一手出完"
-            else:
-                tail_s = f"{ctx.get('after_power') or 0:.2f}"
-            sy = min(ys) - rh
-            if sy >= bottom:                     # 三表下方汇总行
-                self.add_widget(_label(
-                    f"[b]当前牌力[/b] {ctx.get('cur_power', 0) or 0:.2f}"
-                    f" → 出牌后 {tail_s}", size=fs, color=HEAD_C,
-                    pos=(px + ga_x, sy),
-                    widget_size=(gc_x - ga_x + wc + c2, rh),
+                self.add_widget(_fl(
+                    "[b]" + head + "[/b]", size=fz, color=HEAD_C,
+                    pos=(xd, ty - rh), widget_size=(sum(ws3), rh),
                     halign="left"))
-        for ri, row in enumerate(rows):
-            if y - (rh + (nh if ri == 0 else 0)) < bottom:
-                break
-            sel = row[0].startswith("▶")
-            color = (1.0, 0.90, 0.45, 1) if sel else \
-                ((0.75, 0.78, 0.72, 1) if ri == 0 else (0.95, 0.95, 0.90, 1))
-            for ci, cell in enumerate(row):
-                self.add_widget(_label(
-                    cell, size=fs, color=color,
-                    bold=sel or ri == 0,
+                ty -= rh
+                for ci, htxt in enumerate(("牌型", "手数", "控制")):
+                    self.add_widget(_fl(
+                        htxt, size=fz, color=HEAD_C, bold=True,
+                        pos=(xd + sum(ws3[:ci]), ty - rh),
+                        widget_size=(ws3[ci], rh), halign="left"))
+                ty -= rh
+                fh = (len(foot3) + len(extra_foot)) * rh
+                for lab, val_h, val_c in rows3:
+                    if ty - rh < bottom + fh:
+                        break
+                    self.add_widget(_fl(
+                        lab, size=fz, color=BODY_C,
+                        pos=(xd, ty - rh), widget_size=(ws3[0], rh),
+                        halign="left"))
+                    self.add_widget(_fl(
+                        val_h, size=fz, color=BODY_C,
+                        pos=(xn, ty - rh), widget_size=(ws3[1], rh),
+                        halign="left"))
+                    self.add_widget(_fl(
+                        val_c, size=fz, color=BODY_C,
+                        pos=(xc, ty - rh), widget_size=(ws3[2], rh),
+                        halign="left"))
+                    ty -= rh
+                fy = bottom + len(foot3) * rh
+                for lab, val_h, val_c in extra_foot:   # 附加行：普通页脚样式
+                    self.add_widget(_fl(
+                        lab, size=fz, color=HEAD_C, bold=True,
+                        pos=(xd, fy), widget_size=(ws3[0], rh),
+                        halign="left"))
+                    self.add_widget(_fl(
+                        val_h, size=fz, color=HEAD_C, bold=True,
+                        pos=(xn, fy), widget_size=(ws3[1], rh),
+                        halign="left"))
+                    self.add_widget(_fl(
+                        val_c, size=fz, color=HEAD_C, bold=True,
+                        pos=(xc, fy), widget_size=(ws3[2], rh),
+                        halign="left"))
+                    fy += rh
+                fy = bottom
+                for lab, val_h, val_c in foot3:  # 页脚两行：加粗加黄贴底
+                    self.add_widget(_fl(
+                        lab, size=fz, color=HOT_C, bold=True,
+                        pos=(xd, fy), widget_size=(ws3[0], rh),
+                        halign="left"))
+                    self.add_widget(_fl(
+                        val_h, size=fz, color=HOT_C, bold=True,
+                        pos=(xn, fy), widget_size=(ws3[1], rh),
+                        halign="left"))
+                    self.add_widget(_fl(
+                        val_c, size=fz, color=HOT_C, bold=True,
+                        pos=(xc, fy), widget_size=(ws3[2], rh),
+                        halign="left"))
+                    fy += rh
+
+            rows_a = _rows3(groups)
+            # 页脚两行：总控制｜合计（非炸手数+牌力同行，2026-10-21 用户定）
+            foot_a = [("总控制", "", f"{ctx.get('cur_control', 0) or 0:.3f}"),
+                      ("合计", f"{ctx.get('cur_hands', 0) or 0:.1f}",
+                       f"{ctx.get('cur_power', 0) or 0:.3f}")]
+            if afters is None:                   # 旧档无出牌后明细
+                rows_b = [("（无明细）", "", "")]
+                extra_b: tuple = ()
+                foot_b = [("总控制", "", "—"), ("合计", "—", "—")]
+            elif ctx.get("finished"):
+                rows_b, extra_b = [], (("已出完", "", ""),)
+                foot_b = [("总控制", "", "—"), ("合计", "—", "—")]
+            else:
+                rows_b = _rows3(afters)
+                extra_b = ()
+                foot_b = [("总控制", "",
+                           f"{ctx.get('after_control', 0) or 0:.3f}"),
+                          ("合计", f"{ctx.get('after_hands', 0) or 0:.1f}",
+                           f"{ctx.get('after_power', 0) or 0:.3f}")]
+            ws_a = _w3(rows_a, foot_a, "手牌清单（前）")
+            ws_b = _w3(rows_b, foot_b, "手牌清单（后）")
+            # 两表与候选表两段间隙等距（左右边沿距不变；放不下时压牌型
+            # 列保最小间距，2026-10-21 用户定）
+            g2 = (xs[0] - px - ga_x - (sum(ws_a) + sum(ws_b))) / 2.0
+            if g2 < 6:
+                fixed = ws_a[1] + ws_a[2] + ws_b[1] + ws_b[2]
+                k = max(0.0, xs[0] - px - ga_x - 12 - fixed) \
+                    / max(1, ws_a[0] + ws_b[0])
+                ws_a[0] = max(36, int(ws_a[0] * k))
+                ws_b[0] = max(36, int(ws_b[0] * k))
+                # 压缩后按实际宽度重算，保证两段间隙严格相等
+                g2 = (xs[0] - px - ga_x - (sum(ws_a) + sum(ws_b))) / 2.0
+            gb_x = ga_x + sum(ws_a) + g2         # 出牌后表 x
+            _col3(ga_x, ws_a, "手牌清单（前）", rows_a, foot_a)
+            _col3(gb_x, ws_b, "手牌清单（后）", rows_b, foot_b, extra_b)
+        if is_value:
+            # value 档：表头固定（说明行删除），数据行入滚动区（行多时
+            # 显示滚动条，2026-10-21 用户定）
+            for ci, cell in enumerate(rows[0]):
+                self.add_widget(_fl(
+                    cell, size=fz, color=(0.75, 0.78, 0.72, 1), bold=True,
                     pos=(xs[ci], y - rh),
                     widget_size=(ws[ci], rh), halign="left"))
-            if ri == 0:                          # 表头下方备注：各列含义
-                for ci, txt in enumerate(NOTE):
-                    self.add_widget(_label(
-                        txt, size=nfs, color=(0.65, 0.68, 0.62, 1),
-                        pos=(xs[ci], y - rh - nh),
-                        widget_size=(ws[ci], nh), halign="left"))
-                y -= rh + nh                     # 表头行占位=表头+备注
-                continue
-            y -= rh
-        if is_value:                             # 底注：四因子公式（贴底）
-            for i, txt in enumerate(FL):
-                self.add_widget(_label(
-                    txt, size=nff, color=(0.65, 0.68, 0.62, 1),
-                    pos=(px + int(0.03 * pw),
-                         fbase + (len(FL) - 1 - i) * flh),
-                    widget_size=(int(0.94 * pw), flh), halign="left"))
+            data = rows[1:]
+            sv_h = max(rh, (y - rh) - bottom)        # 数据区可视高度
+            sv_w = xs[-1] + ws[-1] - xs[0]
+            inner_h = max(sv_h, len(data) * rh)
+            if data:
+                from kivy.uix.floatlayout import FloatLayout
+                from kivy.uix.scrollview import ScrollView
+                # size_hint 必须关闭：RelativeLayout 下默认 (1,1) 会把滚
+                # 动区拉伸到全屏，内容顶到界面上部（2026-10-21 修复）
+                sv = ScrollView(pos=(xs[0], bottom), size=(sv_w, sv_h),
+                                size_hint=(None, None), do_scroll_x=False,
+                                scroll_type=["bars", "content"],
+                                bar_width=max(4, int(fz * 0.28)),
+                                bar_color=(0.8, 0.78, 0.45, 0.9),
+                                bar_inactive_color=(0.45, 0.45, 0.3, 0.4),
+                                bar_margin=2, scroll_y=1)
+                # 注意：Kivy 2.3 ScrollView 渲染走 canvas Translate，内容
+                # pos 恒被置 (0,0)，行坐标一律相对内容左下角即可；本处唯
+                # 一关键点是上方 size_hint=(None, None)，缺失时滚动区被
+                # 拉伸至全屏、内容顶到界面上部（2026-10-21 修复）
+                fl = FloatLayout(size_hint=(None, None),
+                                 size=(sv_w, inner_h))
+                for j, row in enumerate(data):
+                    sel = row[0].startswith("▶")
+                    color = (1.0, 0.90, 0.45, 1) if sel \
+                        else (0.95, 0.95, 0.90, 1)
+                    for ci, cell in enumerate(row):
+                        fl.add_widget(_fl(
+                            cell, size=fz, color=color, bold=sel,
+                            pos=(xs[ci] - xs[0], inner_h - (j + 1) * rh),
+                            widget_size=(ws[ci], rh), halign="left"))
+                sv.add_widget(fl)
+                self.add_widget(sv)
         else:
-            self.add_widget(_label(
+            for ri, row in enumerate(rows):
+                if y - rh < bottom:
+                    break
+                sel = row[0].startswith("▶")
+                color = (1.0, 0.90, 0.45, 1) if sel else \
+                    ((0.75, 0.78, 0.72, 1) if ri == 0 else (0.95, 0.95, 0.90, 1))
+                for ci, cell in enumerate(row):
+                    self.add_widget(_fl(
+                        cell, size=fz, color=color,
+                        bold=sel or ri == 0,
+                        pos=(xs[ci], y - rh),
+                        widget_size=(ws[ci], rh), halign="left"))
+                y -= rh                          # 表头下说明行已删除
+        if is_value:                             # 底注：四因子公式（贴底）
+            for i, txt in enumerate(flines):
+                self.add_widget(_fl(
+                    txt, size=nff, color=(0.65, 0.68, 0.62, 1),
+                    pos=(fx0, fy0 + (len(flines) - 1 - i) * flh),
+                    widget_size=(max_fw, flh), halign="left"))
+        else:
+            self.add_widget(_fl(
                 tail,
-                size=fs, color=(0.65, 0.68, 0.62, 1),
+                size=fz, color=(0.65, 0.68, 0.62, 1),
                 pos=(px + int(0.03 * pw), fbase),
                 widget_size=(int(0.94 * pw), lh), halign="left"))
-        # 左下「校核」（阶段五人工校核入口）+ 右下「关闭」
-        self.add_widget(FlatButton("校核", (0.72, 0.45, 0.12, 1),
-                                   (lambda sn=snap: self._open_review(sn)),
-                                   pos=(px + int(0.03 * pw),
-                                        py + int(0.012 * H)),
-                                   size=(int(bh * 1.5), bh), font_size=fs))
+        # 右上「关闭」：距上/右边界各 1 字宽（2026-10-21 用户定）；
+        # 校核钮及其表单已删除
         self.add_widget(FlatButton("关闭", BLUE, self._close_snapshot,
-                                   pos=(px + pw - int(0.03 * pw)
-                                        - int(bh * 1.5),
-                                        py + int(0.012 * H)),
-                                   size=(int(bh * 1.5), bh), font_size=fs))
-
-    # ---- 人工校核标注（阶段五）：类别/结论/建议/适用条件/是否入回归集
-    def _open_review(self, snap: dict):
-        self._stop_auto()
-        self._review_open = snap
-        self._review_msg = ""
-        self._review_draft = {"category": CATEGORIES[4],
-                              "verdict": VERDICTS[1],
-                              "to_regression": False}
-        self._rebuild()
-
-    def _close_review(self):
-        self._review_open = None
-        self._review_msg = ""
-        self._rebuild()
-
-    def _save_review(self):
-        snap = self._review_open or {}
-        try:
-            rec = ReviewStore().append(
-                decision_id=str(snap.get("decision_id", "")),
-                category=self._review_draft["category"],
-                verdict=self._review_draft["verdict"],
-                note=self._rv_note.text.strip(),
-                conditions=self._rv_cond.text.strip(),
-                to_regression=self._review_draft["to_regression"])
-            self._review_msg = f"已保存 {rec['review_id']}（待处理）"
-            if rec["to_regression"]:
-                self._review_msg += "，待落回归用例后 --sync 回写测试状态"
-        except Exception as e:
-            self._review_msg = f"保存失败：{e}"
-        self._rebuild()
-
-    def _build_review_form(self, snap: dict):
-        from kivy.uix.textinput import TextInput
-        from ui import BLUE, FlatButton, Panel, _CJK_FONT, _label
-
-        class _Toggle(FlatButton):
-            """选中态高亮的开关按钮（不重建组件树，保持输入框文字）。"""
-
-            def __init__(self, text, on_press, selected=False, **kw):
-                super().__init__(text, (0.24, 0.30, 0.24, 1), on_press, **kw)
-                self.set_selected(selected)
-
-            def set_selected(self, val: bool):
-                c = (1.0, 0.88, 0.40, 1) if val else self.base_color
-                self._top_c.rgba = c
-                self._bd_c.rgba = FlatButton._shade(c, 0.60)
-                self._label.color = ((0.15, 0.13, 0.05, 1) if val
-                                     else self.text_color + (1,))
-
-        GREEN = (0.20, 0.60, 0.30, 1)
-        W, H = Window.width, Window.height
-        DIM = (0.10, 0.11, 0.13, 0.55)
-        self.add_widget(Panel(pos=(0, 0), size=(W, H), color=DIM,
-                              border=DIM, radius=0))
-        pw, ph = int(0.58 * W), int(0.86 * H)
-        px, py = (W - pw) // 2, (H - ph) // 2
-        self.add_widget(Panel(pos=(px, py), size=(pw, ph),
-                              color=(0.16, 0.17, 0.15, 0.98)))
-        fs = max(11, int(0.022 * H))
-        mx = px + int(0.03 * pw)
-        cw = int(0.94 * pw)
-        did = str(snap.get("decision_id", ""))
-        try:
-            n_have = len(ReviewStore().by_decision(did))
-        except Exception:
-            n_have = 0
-        y = py + ph - int(0.040 * H)
-        self.add_widget(_label("[b]校核标注[/b]", size=int(fs * 1.2),
-                               pos=(mx, y), widget_size=(cw, int(0.035 * H)),
-                               halign="left"))
-        y -= int(0.030 * H)
-        self.add_widget(_label(
-            f"{did}　已有 {n_have} 条校核", size=int(fs * 0.85),
-            color=(0.80, 0.80, 0.74, 1), pos=(mx, y),
-            widget_size=(cw, int(0.026 * H)), halign="left"))
-        y -= int(0.034 * H)
-        draft = self._review_draft
-
-        def section(text):
-            nonlocal y
-            self.add_widget(_label(text, size=int(fs * 0.92),
-                                   color=(0.72, 0.76, 0.68, 1),
-                                   pos=(mx, y), widget_size=(cw, int(0.024 * H)),
-                                   halign="left"))
-            y -= int(0.030 * H)
-
-        def toggles(items, n_row, h):
-            """n_row 行开关组；回调在创建后按组绑定（避免前向引用）。"""
-            nonlocal y
-            gap = int(0.006 * W)
-            per = (len(items) + n_row - 1) // n_row
-            bw = (cw - (per - 1) * gap) // per
-            btns: List[tuple] = []
-            for i, it in enumerate(items):
-                r, c = divmod(i, per)
-                bx = mx + c * (bw + gap)
-                by = y - h - r * (h + int(0.008 * H))
-                btn = _Toggle(it, (lambda: None), pos=(bx, by),
-                              size=(bw, h))
-                btns.append((btn, it))
-                self.add_widget(btn)
-            y -= n_row * h + (n_row - 1) * int(0.008 * H) + int(0.014 * H)
-            return btns
-
-        section("类别（记牌/推理/局势/团队/候选评价/炸弹/拆牌/规则/信息不足）")
-        cat_btns = toggles(list(CATEGORIES), 2, int(0.042 * H))
-
-        def pick_cat(it):
-            draft["category"] = it
-            for b, it2 in cat_btns:
-                b.set_selected(it2 == it)
-
-        for b, it in cat_btns:
-            b.on_press = (lambda t=it: pick_cat(t))
-        section("结论")
-        ver_btns = toggles([VERDICT_LABELS[v] for v in VERDICTS], 1,
-                           int(0.042 * H))
-
-        def pick_verdict(lab):
-            draft["verdict"] = next(v for v, l in VERDICT_LABELS.items()
-                                    if l == lab)
-            for b, l2 in ver_btns:
-                b.set_selected(l2 == lab)
-
-        for b, lab in ver_btns:
-            b.set_selected(lab == VERDICT_LABELS[draft["verdict"]])
-            b.on_press = (lambda t=lab: pick_verdict(t))
-        section("建议（此处应如何处理、依据是什么）")
-        nh = int(0.115 * H)
-        self._rv_note = TextInput(text="", multiline=True, font_name=_CJK_FONT,
-                                  font_size=fs, size_hint=(None, None),
-                                  pos=(mx, y - nh), size=(cw, nh),
-                                  foreground_color=(1, 1, 1, 1),
-                                  background_color=(0.10, 0.11, 0.10, 1))
-        self.add_widget(self._rv_note)
-        y -= nh + int(0.016 * H)
-        section("适用条件（该建议在什么局面下成立）")
-        ch = int(0.042 * H)
-        self._rv_cond = TextInput(text="", multiline=False,
-                                  font_name=_CJK_FONT, font_size=fs,
-                                  size_hint=(None, None), pos=(mx, y - ch),
-                                  size=(cw, ch),
-                                  foreground_color=(1, 1, 1, 1),
-                                  background_color=(0.10, 0.11, 0.10, 1))
-        self.add_widget(self._rv_cond)
-        y -= ch + int(0.018 * H)
-        # 纳入回归集开关
-        def pick_reg():
-            draft["to_regression"] = not draft["to_regression"]
-            reg_btn.set_selected(draft["to_regression"])
-        reg_btn = _Toggle("纳入回归集", (lambda: pick_reg()),
-                          selected=draft["to_regression"],
-                          pos=(mx, y - int(0.042 * H)),
-                          size=(int(0.24 * pw), int(0.042 * H)))
-        self.add_widget(reg_btn)
-        self.add_widget(_label("勾选后须落 fixed_cases 用例并 --sync 通过，"
-                               "才可置「已采纳」", size=int(fs * 0.80),
-                               color=(0.65, 0.68, 0.62, 1),
-                               pos=(mx + int(0.26 * pw), y - int(0.036 * H)),
-                               widget_size=(int(0.66 * pw), int(0.030 * H)),
-                               halign="left"))
-        y -= int(0.042 * H) + int(0.020 * H)
-        # 底部：保存 / 返回 / 状态提示
-        bh = int(0.048 * H)
-        bw2 = int(bh * 1.5)
-        self.add_widget(FlatButton("保存", GREEN, self._save_review,
-                                   pos=(px + pw - int(0.03 * pw)
-                                        - 2 * bw2 - int(0.010 * W),
-                                        py + int(0.012 * H)),
-                                   size=(bw2, bh)))
-        self.add_widget(FlatButton("返回", BLUE, self._close_review,
-                                   pos=(px + pw - int(0.03 * pw) - bw2,
-                                        py + int(0.012 * H)),
-                                   size=(bw2, bh)))
-        if self._review_msg:
-            self.add_widget(_label(self._review_msg, size=int(fs * 0.88),
-                                   color=(0.55, 0.95, 0.55, 1),
-                                   pos=(mx, py + int(0.020 * H)),
-                                   widget_size=(int(0.55 * pw), int(0.034 * H)),
-                                   halign="left"))
+                                   pos=(px + pw - fz - btn_w,
+                                        py + ph - fz - bh),
+                                   size=(btn_w, bh), font_size=fts,
+                                   font_name=_FS_FONT))
 
     def _delete(self, path: str):
         try:
