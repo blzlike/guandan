@@ -5,13 +5,16 @@
 状态，复用 rules 的牌型与同花顺枚举，不自行实现合法性校验。
 
 步骤①（已完成）：手牌分解器 + 牌力因子。
-- decompose(): 手牌→牌组。火牌（天王炸/炸弹/同花顺）优先独立成组
-  （含逢人配配火：3 张同点 + 配成 4 头炸），其余枚举序列窗口组合
-  （上限 MAX_SEQ_PLANS 个叶方案，确定性）按「最大牌力」选基础方案：
-  牌力=控制系数÷(非炸手数+1) 最大，平局取组数少、先枚举者（2026-10-20
-  用户定：全程组合最大牌力的组合作为基础方案，其他方案作为备选）。
-  同手牌结果缓存（键=eids+级牌，纯函数可跨局复用）。窗口约定与
-  rules.classify 一致（A 可作 1、2 可入序列、王只作单/对）。
+- decompose(): 手牌→牌组。火牌（天王炸/炸弹/同花顺）优先独立成组，
+  逢人配分配（配火 4/5 头炸、自然炸弹升头、不配留作级牌）枚举为多个
+  火牌方案逐一定（上限 MAX_FIRE_PLANS，2026-10-21 用户定「以最大牌力
+  作为基准」，取代旧配火贪心）；其余枚举序列窗口组合（上限
+  MAX_SEQ_PLANS 个叶方案，确定性）按「最大牌力」选基础方案：
+  牌力=控制系数÷(非炸手数+1) 最大，平局取组数少、用配多、目标点值
+  高、先枚举者（2026-10-20 用户定：全程组合最大牌力的组合作为基础
+  方案，其他方案作为备选）。同手牌结果缓存（键=eids+级牌，纯函数可
+  跨局复用）。窗口约定与 rules.classify 一致（A 可作 1、2 可入序列、
+  王只作单/对）。
 - power_of(): 控制力按底表 v2 逐组计值（每组一值：顶级组 1.0——单/对
   大王、级牌顶三张/三带二，其余非火组=顶点×0.001 小补偿；全部非炸牌型
   含「顶级类出完→次大牌组继承 1.0」提升规则）+ 非炸弹手数（每组
@@ -190,6 +193,7 @@ class Group:
 
 # ---------------------------------------------------------------- 分解器
 MAX_SEQ_PLANS = 256        # 序列窗口叶方案枚举上限（超出确定性截断）
+MAX_FIRE_PLANS = 64        # 逢人配分配方案枚举上限（双逢人配极端局面截断）
 _DEC_CACHE: Dict[Tuple[Tuple[int, ...], int], List[Group]] = {}
 _DEC_CACHE_MAX = 4096      # 缓存上限（满则清空；eid 唯一可跨局复用）
 
@@ -224,13 +228,15 @@ def _enumerate_windows(counts: Dict[int, List[Card]]
 def decompose(cards: Sequence[Card], level_rank: int) -> List[Group]:
     """手牌 → 牌组分解（确定性：同输入同输出，带结果缓存）。
 
-    火牌优先独立成组：天王炸 → 自然炸弹（同点≥4，含 5~8 头）→
-    配火炸弹（3 张同点 + 逢人配）→ 同花顺（每花色取顶牌最大者）。
-    其余按「最大牌力」搜索基础方案：枚举序列窗口子集（上限
-    MAX_SEQ_PLANS 个叶方案）逐叶贪心收尾（三带二→三/对/单→王组），
-    取 牌力=控制系数÷(非炸手数+1) 最大者，平局取组数少、先枚举者
-    （2026-10-20 用户定：全程组合最大牌力的组合作为基础方案，其他
-    方案作为备选）。逢人配未配火时按自然点（级牌）参与非火分组。
+    火牌优先独立成组：天王炸 → 自然炸弹（同点≥4，恒保持）→ 同花顺
+    （每花色取顶牌最大者，自然牌优先）。逢人配分配（恰好 3 张级配火
+    4/5 头炸、自然炸弹升头、不配留作级牌）枚举为多个火牌方案
+    （上限 MAX_FIRE_PLANS），每方案独立搜索非火分组，全局取
+    牌力=控制系数÷(非炸手数+1) 最大者；平局取组数少、用配多、目标
+    点值高、先枚举者（2026-10-21 用户定「以最大牌力作为基准」，取代
+    旧配火贪心——贪心会把逢人配焊给点值最高的三张级，错失更大组合，
+    如 KKK$ 挤掉 888$+同花顺）。逢人配未配火时按自然点（级牌）参与
+    非火分组/同花顺补位。
     """
     key = (tuple(sorted(c.eid for c in cards)), level_rank)
     hit = _DEC_CACHE.get(key)
@@ -243,87 +249,66 @@ def decompose(cards: Sequence[Card], level_rank: int) -> List[Group]:
     return list(result)
 
 
-def _decompose_impl(cards: Sequence[Card], level_rank: int) -> List[Group]:
-    if not cards:
-        return []
-    groups: List[Group] = []
-    rest = list(cards)
+def _wild_assignments(cnt: Dict[int, List[Card]], wild_n: int,
+                      level_rank: int) -> List[Dict[int, int]]:
+    """逢人配分配方案枚举（2026-10-21 用户定「以最大牌力作为基准」）。
 
-    # 1) 天王炸
-    jokers = sorted((c for c in rest if c.is_joker),
-                    key=lambda c: (c.rank, c.eid))
-    if len(jokers) == 4:
-        groups.append(Group(HandType.ROCKET, 100, tuple(jokers)))
-        rest = [c for c in rest if not c.is_joker]
-        jokers = []
+    每方案 = {rank: 配入数}（仅列非零项）。目标级域 = 恰好 3 张的级
+    （配火成 4/5 头炸）∪ ≥4 张自然炸弹级（升头，炸身 ≤8 头）；含空
+    分配 {}（逢人配按自然点参与非火分组/同花顺补位）。双逢人配注入
+    式分配：可集中同级（升两头/配五头）或分给两级。方案顺序 = 用配
+    总数降序 → 目标点值降序（平局保配火倾向，与旧贪心一致），超出
+    MAX_FIRE_PLANS 按 DFS 序确定性截断。无逢人配时恒返回 [{}]，路径
+    与旧实现零差异。
+    """
+    if wild_n <= 0:
+        return [{}]
+    targets: List[Tuple[int, int]] = []
+    for r, cs in cnt.items():
+        n = len(cs)
+        cap = (8 - n) if n >= RuleConfig.BOMB_MIN_SIZE else (2 if n == 3 else 0)
+        if cap >= 1:
+            targets.append((r, min(cap, wild_n)))
+    if not targets:
+        return [{}]
+    ranks = sorted((r for r, _c in targets),
+                   key=lambda r: -point_value(r, level_rank))
+    cap_of = dict(targets)
+    plans: List[Tuple[Tuple, Dict[int, int]]] = []
 
-    # 2) 自然炸弹 + 配火炸弹
-    wilds = sorted((c for c in rest if c.is_wild(level_rank)),
-                   key=lambda c: c.eid)
-    wild_set = {c.eid for c in wilds}
-    plain = [c for c in rest if c.eid not in wild_set and not c.is_joker]
-    cnt: Dict[int, List[Card]] = {}
-    for c in sorted(plain, key=lambda c: (c.suit, c.eid)):
-        cnt.setdefault(c.rank, []).append(c)
-    used_wild = 0
+    def _rec(i: int, left: int, cur: Dict[int, int]) -> None:
+        if i == len(ranks):
+            if len(plans) < MAX_FIRE_PLANS:
+                skey = tuple(sorted((-point_value(r, level_rank), k)
+                                    for r, k in cur.items()))
+                plans.append((skey, dict(cur)))
+            return
+        r = ranks[i]
+        for k in range(min(cap_of[r], left), -1, -1):
+            if k:
+                cur[r] = k
+            _rec(i + 1, left - k, cur)
+            cur.pop(r, None)
 
-    def _bomb(rank: int, size: int, extra: List[Card]) -> None:
-        cs = cnt[rank][:size]
-        del cnt[rank][:size]
-        if extra:
-            cs = cs + extra
-        groups.append(Group(HandType.BOMB, point_value(rank, level_rank),
-                            tuple(cs)))
+    _rec(0, wild_n, {})
+    plans.sort(key=lambda t: (-sum(t[1].values()), t[0]))
+    return [m for _skey, m in plans]
 
-    # 自然炸弹：≥4 张同点全部成组（点数降序）
-    for r in sorted(cnt, key=lambda r: -point_value(r, level_rank)):
-        while len(cnt.get(r, [])) >= RuleConfig.BOMB_MIN_SIZE:
-            _bomb(r, len(cnt[r]), [])
 
-    # 配火炸弹：3 张同点 + 1 逢人配（配火倾向，基准配火率 85%）
-    for r in sorted(cnt, key=lambda r: -point_value(r, level_rank)):
-        if used_wild < len(wilds) and len(cnt.get(r, [])) == 3:
-            _bomb(r, 3, [wilds[used_wild]])
-            used_wild += 1
-
-    # 3) 同花顺：自然牌优先（每花色顶牌最大者），逢人配仅补位成火。
-    #    2026-10-20 修：原「顶牌最大」会让 wild 凑高顺拆散自然同花顺、
-    #    低张散落成多余手数（用户报告的「重复计算」观感根源之一）。
-    used_eids = {x.eid for g in groups for x in g.cards}
-    remaining = ([c for cs in cnt.values() for c in cs]
-                 + wilds[used_wild:] + jokers)
-    if len(remaining) >= RuleConfig.STRAIGHT_LENGTH:
-        naturals = [c for c in remaining
-                    if not c.is_wild(level_rank) and not c.is_joker]
-        for pool in (naturals, remaining):      # 自然同花顺先，wild 补位
-            for combo in sorted(find_straight_flushes(pool, level_rank),
-                                key=lambda c: (-c.rank, int(c.suit or 0))):
-                if any(x.eid in used_eids for x in combo.cards):
-                    continue
-                groups.append(Group(HandType.STRAIGHT_FLUSH, combo.rank,
-                                    tuple(combo.cards)))
-                used_eids.update(x.eid for x in combo.cards)
-
-    # 4) 非火分组：剩余实体牌按点数计数（逢人配按自然点=级牌参与）
-    left_jokers: List[Card] = []
-    counts: Dict[int, List[Card]] = {}
-    for c in remaining:
-        if c.eid in used_eids:
-            continue
-        if c.is_joker:
-            left_jokers.append(c)
-        else:
-            counts.setdefault(c.rank, []).append(c)
-
-    # 5) 最大牌力搜索：序列窗口子集 × 贪心收尾，取 牌力=控制÷(非炸手数+1)
-    #    最大者。控制力按底表逐组计值（_group_control，静态底表不带提升，
-    #    与缓存纯函数性一致）；非炸手数=非火组数（每组恒 1 手，2026-10-20
-    #    用户定）。平局取组数少、先枚举者（严格 < 保证确定性）。
-    fire_ctrl = sum(_group_control(g, level_rank) for g in groups)
+def _nonfire_search(counts: Dict[int, List[Card]], left_jokers: List[Card],
+                    fire_ctrl: float,
+                    level_rank: int) -> Tuple[float, int, List[Group]]:
+    """非火部分最大牌力搜索（原步骤5，逐火牌方案调用）：枚举序列窗口
+    子集（上限 MAX_SEQ_PLANS 叶）× 贪心收尾（三带二→三/对/单→王组），
+    返回 (牌力值, 非火组数, 非火组列表)；牌力 = (fire_ctrl+非火控制)
+    ÷ (非火手数+1)，叶内平局取组数少、先枚举者（严格 < 保确定性）。
+    控制力按底表逐组计值（_group_control 静态底表，与缓存纯函数性
+    一致）；非炸手数=非火组数（每组恒 1 手，2026-10-20 用户定）。"""
     windows = _enumerate_windows(counts)
     used: Set[int] = set()
     best: List[Group] = []
     best_key: Optional[Tuple[float, int]] = None
+    best_val = 0.0
     plan_n = 0
 
     def _finish() -> List[Group]:
@@ -372,17 +357,18 @@ def _decompose_impl(cards: Sequence[Card], level_rank: int) -> List[Group]:
         return out
 
     def _leaf(seq_gs: List[Group]) -> None:
-        nonlocal plan_n, best_key, best
+        nonlocal plan_n, best_key, best, best_val
         plan_n += 1
         extra = _finish()
         ctrl = fire_ctrl + sum(_group_control(g, level_rank)
                                for g in seq_gs + extra)
         hands = float(len(seq_gs) + len(extra))
         value = ctrl / (hands + 1.0)
-        key = (-round(value, 9), len(groups) + len(seq_gs) + len(extra))
+        key = (-round(value, 9), len(seq_gs) + len(extra))
         if best_key is None or key < best_key:
             best_key = key
-            best = groups + seq_gs + extra
+            best_val = value
+            best = seq_gs + extra
 
     def _dfs(i: int, seq_gs: List[Group]) -> None:
         if plan_n >= MAX_SEQ_PLANS:
@@ -400,6 +386,90 @@ def _decompose_impl(cards: Sequence[Card], level_rank: int) -> List[Group]:
         _dfs(i + 1, seq_gs)
 
     _dfs(0, [])
+    if best_key is None:
+        return 0.0, 0, []
+    return best_val, best_key[1], best
+
+
+def _decompose_impl(cards: Sequence[Card], level_rank: int) -> List[Group]:
+    if not cards:
+        return []
+    rocket: List[Group] = []
+    rest = list(cards)
+
+    # 1) 天王炸（与逢人配无关，先独立）
+    jokers = sorted((c for c in rest if c.is_joker),
+                    key=lambda c: (c.rank, c.eid))
+    if len(jokers) == 4:
+        rocket.append(Group(HandType.ROCKET, 100, tuple(jokers)))
+        rest = [c for c in rest if not c.is_joker]
+        jokers = []
+
+    # 2) 计数：自然炸弹级（≥4 张，恒保持成组——放弃实测均更差）、
+    #    配火候选级（恰好 3 张）、逢人配
+    wilds = sorted((c for c in rest if c.is_wild(level_rank)),
+                   key=lambda c: c.eid)
+    wild_set = {c.eid for c in wilds}
+    plain = [c for c in rest if c.eid not in wild_set and not c.is_joker]
+    cnt: Dict[int, List[Card]] = {}
+    for c in sorted(plain, key=lambda c: (c.suit, c.eid)):
+        cnt.setdefault(c.rank, []).append(c)
+    natural_ranks = {r for r, cs in cnt.items()
+                     if len(cs) >= RuleConfig.BOMB_MIN_SIZE}
+
+    # 3) 逢人配分配方案枚举：每方案独立走「自然炸弹+配火/升头 → 同花顺
+    #    （自然牌优先，留余逢人配仅补位）→ 非火最大牌力搜索」，全局取
+    #    牌力=控制÷(非炸手数+1) 最大者（2026-10-21 用户定，取代旧配火
+    #    贪心）。平局取组数少、用配多、目标点值高、先枚举者（严格 <
+    #    保证确定性）。
+    best: List[Group] = []
+    best_key: Optional[Tuple[float, int, int]] = None
+    for pi, assign in enumerate(
+            _wild_assignments(cnt, len(wilds), level_rank)):
+        gs = list(rocket)
+        cc = {r: list(v) for r, v in cnt.items()}
+        wi = 0
+        for r in sorted(natural_ranks | set(assign),
+                        key=lambda r: -point_value(r, level_rank)):
+            k = assign.get(r, 0)
+            cs = cc.pop(r) + wilds[wi:wi + k]
+            wi += k
+            gs.append(Group(HandType.BOMB, point_value(r, level_rank),
+                            tuple(cs)))
+        used_eids = {x.eid for g in gs for x in g.cards}
+        remaining = ([c for cs in cc.values() for c in cs]
+                     + wilds[wi:] + jokers)
+
+        # 同花顺：自然牌优先（每花色顶牌最大者），留余逢人配仅补位成火
+        if len(remaining) >= RuleConfig.STRAIGHT_LENGTH:
+            naturals = [c for c in remaining
+                        if not c.is_wild(level_rank) and not c.is_joker]
+            for pool in (naturals, remaining):
+                for combo in sorted(find_straight_flushes(pool, level_rank),
+                                    key=lambda c: (-c.rank, int(c.suit or 0))):
+                    if any(x.eid in used_eids for x in combo.cards):
+                        continue
+                    gs.append(Group(HandType.STRAIGHT_FLUSH, combo.rank,
+                                    tuple(combo.cards)))
+                    used_eids.update(x.eid for x in combo.cards)
+
+        # 非火计数（逢人配按自然点=级牌参与）+ 最大牌力搜索
+        left_jokers: List[Card] = []
+        counts: Dict[int, List[Card]] = {}
+        for c in remaining:
+            if c.eid in used_eids:
+                continue
+            if c.is_joker:
+                left_jokers.append(c)
+            else:
+                counts.setdefault(c.rank, []).append(c)
+        value, nf_n, nf_groups = _nonfire_search(
+            counts, left_jokers,
+            sum(_group_control(g, level_rank) for g in gs), level_rank)
+        key = (-round(value, 9), len(gs) + nf_n, pi)
+        if best_key is None or key < best_key:
+            best_key = key
+            best = gs + nf_groups
     return best
 
 

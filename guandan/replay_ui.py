@@ -317,8 +317,9 @@ class ReplayScreen(Screen):
         - 左区（左边沿距不变）两表并排：「手牌清单（前）/（后）」单行
           表头 + 三列=牌型｜手数｜控制（desc 类型短名+点数串，10→X、
           逢人配→$；手数火牌=—其余 1；控制 .3f，数据源 context.
-          cur_groups / after_groups，旧档显示无明细），页脚两行=总控制｜
-          合计（非炸手数+牌力同行）加粗加黄、固定贴表格区下沿始终可见；
+          cur_groups / after_groups，旧档显示无明细），页脚两行=合计
+          （手数/控制列的合计值）｜总牌力，加粗加黄、固定贴表格区下沿
+          始终可见；
           两表与候选表之间等距（左右边沿距不变，放不下时压牌型列）；
         - 右列候选分项表（value=4 因子+胜利值 6 列，列宽按内容自适应、
           列距 1 字符、右贴快照框右沿；表头固定、说明行删除，数据行入
@@ -512,7 +513,7 @@ class ReplayScreen(Screen):
 
             def _col3(x_off, ws3, head, rows3, foot3, extra_foot=()):
                 """三列小表（牌型｜手数｜控制）：单行表头 + 列头 + 数据行
-                （超出可视高度截断让位）+ 页脚两行（总控制｜合计）加粗加
+                （超出可视高度截断让位）+ 页脚两行（合计｜总牌力）加粗加
                 黄固定贴表格区下沿始终可见；extra_foot=页脚上方附加行
                 （如「已出完」）。表头单行不分行（2026-10-21 用户定）。"""
                 xd = px + x_off
@@ -579,23 +580,26 @@ class ReplayScreen(Screen):
                     fy += rh
 
             rows_a = _rows3(groups)
-            # 页脚两行：总控制｜合计（非炸手数+牌力同行，2026-10-21 用户定）
-            foot_a = [("总控制", "", f"{ctx.get('cur_control', 0) or 0:.3f}"),
-                      ("合计", f"{ctx.get('cur_hands', 0) or 0:.1f}",
+            # 页脚两行：合计（手数/控制列的合计值）｜总牌力（2026-10-21
+            # 用户定）；手数合计 :g——v2 恒整数显示「5」，旧档弱组 1.3
+            # 系数保留小数
+            foot_a = [("合计", f"{ctx.get('cur_hands', 0) or 0:g}",
+                       f"{ctx.get('cur_control', 0) or 0:.3f}"),
+                      ("总牌力", "",
                        f"{ctx.get('cur_power', 0) or 0:.3f}")]
             if afters is None:                   # 旧档无出牌后明细
                 rows_b = [("（无明细）", "", "")]
                 extra_b: tuple = ()
-                foot_b = [("总控制", "", "—"), ("合计", "—", "—")]
+                foot_b = [("合计", "—", "—"), ("总牌力", "", "—")]
             elif ctx.get("finished"):
                 rows_b, extra_b = [], (("已出完", "", ""),)
-                foot_b = [("总控制", "", "—"), ("合计", "—", "—")]
+                foot_b = [("合计", "—", "—"), ("总牌力", "", "—")]
             else:
                 rows_b = _rows3(afters)
                 extra_b = ()
-                foot_b = [("总控制", "",
+                foot_b = [("合计", f"{ctx.get('after_hands', 0) or 0:g}",
                            f"{ctx.get('after_control', 0) or 0:.3f}"),
-                          ("合计", f"{ctx.get('after_hands', 0) or 0:.1f}",
+                          ("总牌力", "",
                            f"{ctx.get('after_power', 0) or 0:.3f}")]
             ws_a = _w3(rows_a, foot_a, "手牌清单（前）")
             ws_b = _w3(rows_b, foot_b, "手牌清单（后）")

@@ -144,6 +144,76 @@ def test_natural_straight_flush_before_wild():
     assert gs[1].type is HandType.SINGLE
 
 
+def test_max_power_wild_plan_over_greedy():
+    """2026-10-21 用户报告：旧配火贪心把逢人配焊给点值最高三张级（KKK$），
+    挤掉更大组合。修复后逢人配分配枚举取全局最大牌力：27 张 → 炸弹22222/
+    4444/888$ + 同花顺9XJQK + 单3/对66/对XX/单Q/对KK/单A（1.3976 > 旧贪心
+    1.0246，同手数 6）。"""
+    hand = [spade(2), spade(2), club(2), diamond(2), diamond(2), heart(2),
+            club(3),
+            spade(4), heart(4), club(4), diamond(4),
+            spade(6), heart(6),
+            spade(8), club(8), diamond(8),
+            heart(9),
+            spade(10), heart(10), club(10),
+            heart(11), heart(12), club(12),
+            spade(13), heart(13), diamond(13), spade(14)]
+    gs = va.decompose(hand, 2)  # 级牌=2，红桃2 逢人配
+    descs = [g.desc(2) for g in gs]
+    assert "炸弹888$" in descs and "同花顺9XJQK" in descs
+    assert "炸弹KKK$" not in descs
+    assert "三二88866" not in descs and "三二XXXQQ" not in descs
+    d = va.power_of(hand, 2)
+    assert d.control == pytest.approx(9.783, abs=1e-3)
+    assert d.value == pytest.approx(9.783 / 7, abs=1e-3)
+    assert d.non_bomb_groups == 6
+
+
+def test_wild_enlarges_natural_bomb():
+    """升头：4 张同点 + 逢人配 → 5 头炸（2.610/2=1.305 胜过 4头+级牌单张
+    2.225/3≈0.742）。"""
+    hand = [spade(7), heart(7), club(7), diamond(7), heart(10), spade(3)]
+    gs = va.decompose(hand, LEVEL)
+    fires = fire_groups(hand)
+    assert len(fires) == 1 and fires[0].type is HandType.BOMB
+    assert fires[0].size == 5
+    assert any(c.is_wild(LEVEL) for c in fires[0].cards)
+    assert [g.type for g in gs] == [HandType.BOMB, HandType.SINGLE]
+    d = va.power_of(hand, LEVEL)
+    assert d.value == pytest.approx(2.610 / 2, abs=1e-3)
+
+
+def test_wild_to_straight_flush_over_match_bomb():
+    """反例：配火非最优——三张10 + 红桃JQKA + 逢人配 → 逢人配补同花顺
+    10JQKA（2.814+级牌三张1.0，1.272）胜过配火 4头级牌炸（2.5+散张，
+    0.426）→ 不成炸弹。"""
+    hand = [spade(10), club(10), diamond(10),
+            heart(11), heart(12), heart(13), heart(14), heart(10), spade(3)]
+    gs = va.decompose(hand, LEVEL)
+    fires = fire_groups(hand)
+    assert len(fires) == 1 and fires[0].type is HandType.STRAIGHT_FLUSH
+    assert any(c.is_wild(LEVEL) for c in fires[0].cards)
+    assert fires[0].rank == 14
+    assert all(g.type is not HandType.BOMB for g in gs)
+
+
+def test_two_wilds_split_match_bombs():
+    """双逢人配注入式分配：三张10+三张K+双逢人配 → 各配一头（炸弹10$+
+    炸弹K$，4.916/2=2.458）胜过集中同级（5头级牌炸 1.239 等）。"""
+    hand = [spade(10), club(10), diamond(10),
+            spade(13), club(13), diamond(13),
+            heart(10), heart(10), spade(3)]
+    gs = va.decompose(hand, LEVEL)
+    fires = fire_groups(hand)
+    assert len(fires) == 2
+    assert sorted(f.cards[0].rank for f in fires) == [10, 13]
+    assert all(f.size == 4 for f in fires)
+    assert [g.type for g in gs] == [HandType.BOMB, HandType.BOMB,
+                                    HandType.SINGLE]
+    d = va.power_of(hand, LEVEL)
+    assert d.value == pytest.approx(4.916 / 2, abs=1e-3)
+
+
 def test_seq_order_enumeration():
     """连对/顺子顺序枚举取手数少者：两份5-8+单9 → 连对 556677 + 对88 +
     单9（3 组；实测口径，顺子方案会散成更多手）。"""
